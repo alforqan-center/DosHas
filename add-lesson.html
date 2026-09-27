@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>On Fire Academy - إدارة وإضافة الدروس</title>
+    <!-- استيراد خط Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <!-- استيراد مكتبات Firebase عبر CDN -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -32,6 +34,7 @@
             box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.6);
             border: 1px solid #1f2937;
             width: 100%;
+            position: relative;
         }
         .header-bar {
             display: flex;
@@ -55,6 +58,7 @@
             color: #fff;
             border-radius: 8px;
             font-weight: 700;
+            transition: all 0.2s ease;
         }
         .back-btn:hover { background: #4b5563; }
 
@@ -87,6 +91,12 @@
             color: #fff;
             outline: none;
             font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        input:disabled, select:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background-color: #111827;
         }
         input:focus, select:focus {
             border-color: #ff6b00;
@@ -105,13 +115,17 @@
         }
         button:hover { 
             background: linear-gradient(135deg, #e65c00, #cc5200); 
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
         }
         .name-list {
             background: #030712;
             border: 1px solid #1f2937;
             border-radius: 8px;
             margin-top: 6px;
-            max-height: 180px;
+            max-height: 220px;
             overflow-y: auto;
         }
         .name-item {
@@ -123,7 +137,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: background 0.15s ease;
         }
+        .name-item:last-child { border-bottom: none; }
         .name-item:hover { background-color: #1e293b; color: #ff6b00; font-weight: bold; }
         .action-buttons {
             display: grid;
@@ -131,9 +147,41 @@
             gap: 10px;
             margin-top: 15px;
         }
-        .edit-mode-btn { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
-        .delete-mode-btn { background: linear-gradient(135deg, #ef4444, #dc2626); }
-        .new-mode-btn { background: linear-gradient(135deg, #10b981, #059669); }
+        .edit-mode-btn { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); }
+        .edit-mode-btn:hover { background: linear-gradient(135deg, #d97706, #b45309); color: #fff; }
+        .delete-mode-btn { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+        .delete-mode-btn:hover { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+        .new-mode-btn { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+        .new-mode-btn:hover { background: linear-gradient(135deg, #059669, #047857); }
+
+        /* التوست للتنبيهات العائمة */
+        #toast {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1f2937;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #374151;
+            font-size: 14px;
+            font-weight: 700;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        #toast.success { border-color: #10b981; background: #064e3b; color: #a7f3d0; }
+        #toast.error { border-color: #ef4444; background: #7f1d1d; color: #fecaca; }
+        #toast.info { border-color: #3b82f6; background: #1e3a8a; color: #bfdbfe; }
     </style>
 </head>
 <body>
@@ -152,20 +200,21 @@
 
     <!-- البحث الفوري عن الدروس -->
     <div class="search-section">
-        <label>🔍 بحث سريع (باسم الدرس أو المدرس):</label>
-        <input type="text" id="searchInput" placeholder="اكتب اسم الدرس للبحث..." autocomplete="off">
+        <label>🔍 بحث سريع (باسم الدرس، المدرس، الصف، أو الوحدة):</label>
+        <input type="text" id="searchInput" placeholder="اكتب للبحث..." autocomplete="off">
         <div id="lessonListContainer" class="name-list" style="display: none;"></div>
     </div>
 
     <!-- نموذج بيانات الدرس -->
     <div class="form-section">
-        <!-- حقول مخفية لحفظ المسارات القديمة عند التعديل -->
+        <!-- حقول مخفية لحفظ المسارات والبيانات القديمة عند التعديل -->
         <input type="hidden" id="originalLessonId" value="">
         <input type="hidden" id="originalGrade" value="">
         <input type="hidden" id="originalTeacher" value="">
         <input type="hidden" id="originalUnit" value="">
+        <input type="hidden" id="originalCreatedAt" value="">
 
-        <!-- تم تبديل المكان: حقل المدرس أصبح أولاً -->
+        <!-- حقل المدرس -->
         <div class="form-group">
             <label>المدرس:</label>
             <select id="teacherSelect">
@@ -174,7 +223,7 @@
             </select>
         </div>
 
-        <!-- تم تبديل المكان: حقل الصف الدراسي أصبح ثانياً -->
+        <!-- حقل الصف الدراسي -->
         <div class="form-group">
             <label>الصف الدراسي:</label>
             <select id="gradeSelect">
@@ -221,6 +270,9 @@
     </div>
 </div>
 
+<!-- عنصر التنبيهات العائمة Toast -->
+<div id="toast"></div>
+
 <script>
     const firebaseConfig = {
         databaseURL: "https://doshas-e5d12-default-rtdb.firebaseio.com/"
@@ -232,11 +284,31 @@
 
     let allLessonsCache = [];
 
+    // دالة لعرض التنبيهات العائمة (Toast)
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById("toast");
+        toast.className = `show ${type}`;
+        toast.innerText = message;
+        setTimeout(() => {
+            toast.className = toast.className.replace("show", "").trim();
+        }, 3200);
+    }
+
+    // دالة لتوحيد النصوص العربية (Arabic Normalization) لضمان دقة البحث
+    function normalizeArabicText(text) {
+        if (!text) return '';
+        return text
+            .toLowerCase()
+            .replace(/[أإآآ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .replace(/[\u064B-\u0652]/g, '')
+            .trim();
+    }
+
     // دالة لتحديث وعرض خيارات الصفوف بناءً على المدرس المختار
     function updateGradeDropdownBasedOnTeacher(selectedTeacher, targetGrade = null) {
         const gradeSelect = document.getElementById("gradeSelect");
-        
-        // حفظ القيمة الحالية إذا لم يتم تمرير هدف جديد
         let currentGrade = targetGrade || gradeSelect.value;
         
         gradeSelect.innerHTML = "";
@@ -253,7 +325,7 @@
         allGrades.forEach(gradeName => {
             // شرط محمود حسان: لا يدرس للصف الثاني الثانوي
             if (selectedTeacher === "محمود حسان" && gradeName === "ثانية ثانوي") {
-                return; // تخطي وتجـنب إضافة ثانية ثانوي
+                return;
             }
 
             let option = document.createElement("option");
@@ -262,7 +334,6 @@
             gradeSelect.appendChild(option);
         });
 
-        // استعادة الاختيار السابق إذا كان متاحاً ولم يتم استبعاده
         let options = Array.from(gradeSelect.options).map(o => o.value);
         if (currentGrade && options.includes(currentGrade)) {
             gradeSelect.value = currentGrade;
@@ -273,6 +344,8 @@
 
     // تحميل جميع الدروس من فايربيس
     async function loadLessonsData() {
+        const countSpan = document.getElementById("totalLessonsCount");
+        countSpan.innerText = "📊 جاري تحميل الدروس...";
         try {
             const snapshot = await db.ref('lessons').once('value');
             allLessonsCache = [];
@@ -292,7 +365,7 @@
 
                             unitSnap.forEach((lessonSnap) => {
                                 let lessonId = lessonSnap.key;
-                                let lessonData = lessonSnap.val();
+                                let lessonData = lessonSnap.val() || {};
 
                                 allLessonsCache.push({
                                     id: lessonId,
@@ -303,23 +376,26 @@
                                     teacher: teacherName,
                                     unit: unitName,
                                     lessonName: lessonData.lessonName || '',
-                                    youtubeUrl: lessonData.youtubeUrl || ''
+                                    youtubeUrl: lessonData.youtubeUrl || '',
+                                    createdAt: lessonData.createdAt || Date.now()
                                 });
                             });
                         });
                     });
                 });
             }
-            document.getElementById("totalLessonsCount").innerText = `📊 إجمالي الدروس المسجلة: ${allLessonsCache.length}`;
+            countSpan.innerText = `📊 إجمالي الدروس المسجلة: ${allLessonsCache.length}`;
         } catch (error) {
             console.error("خطأ في جلب الدروس:", error);
-            document.getElementById("totalLessonsCount").innerText = "📊 خطأ في الاتصال بقاعدة البيانات";
+            countSpan.innerText = "📊 خطأ في الاتصال بقاعدة البيانات";
+            showToast("تعذر جلب الدروس من قاعدة البيانات", "error");
         }
     }
 
-    // البحث الفوري عن الدروس
+    // البحث الفوري عن الدروس مع دعم البحث المرن
     function filterLessonsData() {
-        let query = document.getElementById("searchInput").value.toLowerCase().trim();
+        let rawQuery = document.getElementById("searchInput").value;
+        let query = normalizeArabicText(rawQuery);
         let listContainer = document.getElementById("lessonListContainer");
 
         if (!query) {
@@ -328,13 +404,21 @@
             return;
         }
 
-        let matched = allLessonsCache.filter(item => 
-            item.lessonName.toLowerCase().includes(query) || item.teacher.toLowerCase().includes(query)
-        );
+        let matched = allLessonsCache.filter(item => {
+            let nameNorm = normalizeArabicText(item.lessonName);
+            let teacherNorm = normalizeArabicText(item.teacher);
+            let gradeNorm = normalizeArabicText(item.grade);
+            let unitNorm = normalizeArabicText(item.unit);
+
+            return nameNorm.includes(query) || 
+                   teacherNorm.includes(query) || 
+                   gradeNorm.includes(query) || 
+                   unitNorm.includes(query);
+        });
 
         if (matched.length === 0) {
             listContainer.style.display = "block";
-            listContainer.innerHTML = '<div style="padding: 10px 14px; color: #ef4444; font-size: 14px;">لا توجد نتائج مطابقة</div>';
+            listContainer.innerHTML = '<div style="padding: 10px 14px; color: #ef4444; font-size: 14px; text-align: center;">لا توجد نتائج مطابقة</div>';
             return;
         }
 
@@ -364,6 +448,7 @@
         document.getElementById("originalGrade").value = item.gradeKey;
         document.getElementById("originalTeacher").value = item.teacherKey;
         document.getElementById("originalUnit").value = item.unitKey;
+        document.getElementById("originalCreatedAt").value = item.createdAt || '';
 
         document.getElementById("teacherSelect").disabled = true;
         document.getElementById("gradeSelect").disabled = true;
@@ -375,6 +460,8 @@
         document.getElementById("selectedLessonActions").style.display = "grid";
         document.getElementById("lessonListContainer").style.display = "none";
         document.getElementById("searchInput").value = "";
+
+        showToast(`تم تحديد درس: "${item.lessonName}"`, "info");
     }
 
     // إعادة النماذج لوضع الإضافة الجديدة
@@ -389,6 +476,7 @@
         document.getElementById("originalGrade").value = "";
         document.getElementById("originalTeacher").value = "";
         document.getElementById("originalUnit").value = "";
+        document.getElementById("originalCreatedAt").value = "";
 
         document.getElementById("teacherSelect").disabled = false;
         document.getElementById("gradeSelect").disabled = false;
@@ -416,9 +504,13 @@
         const youtubeUrl = document.getElementById("youtubeUrlInput").value.trim();
 
         if (!lessonName || !youtubeUrl) {
-            alert("الرجاء إدخال اسم الدرس ولينك يوتيوب!");
+            showToast("الرجاء إدخال اسم الدرس ولينك يوتيوب!", "error");
             return;
         }
+
+        const addBtn = document.getElementById("addLessonBtn");
+        addBtn.disabled = true;
+        addBtn.innerText = "جاري الحفظ... ⏳";
 
         let safeGrade = grade.replace(/\s+/g, '_');
         let safeTeacher = teacher.replace(/\s+/g, '_');
@@ -431,11 +523,15 @@
                 youtubeUrl: youtubeUrl,
                 createdAt: Date.now()
             });
-            alert("تم إضافة الدرس بنجاح إلى فايربيس! 🎉");
+            showToast("تم إضافة الدرس بنجاح إلى فايربيس! 🎉", "success");
             resetToAddNewLesson();
             loadLessonsData();
         } catch (e) {
-            alert("حدث خطأ أثناء الحفظ في قاعدة البيانات.");
+            console.error(e);
+            showToast("حدث خطأ أثناء الحفظ في قاعدة البيانات.", "error");
+        } finally {
+            addBtn.disabled = false;
+            addBtn.innerText = "إضافة الدرس الآن 🚀";
         }
     }
 
@@ -445,6 +541,7 @@
         const oldGrade = document.getElementById("originalGrade").value;
         const oldTeacher = document.getElementById("originalTeacher").value;
         const oldUnit = document.getElementById("originalUnit").value;
+        const origCreatedAt = document.getElementById("originalCreatedAt").value;
 
         const newTeacher = document.getElementById("teacherSelect").value;
         const newGrade = document.getElementById("gradeSelect").value;
@@ -453,8 +550,14 @@
         const youtubeUrl = document.getElementById("youtubeUrlInput").value.trim();
 
         if (!lessonName || !youtubeUrl) {
-            alert("الرجاء ملء البيانات المطلوبة!");
+            showToast("الرجاء ملء البيانات المطلوبة!", "error");
             return;
+        }
+
+        const saveBtn = document.getElementById("saveEditLessonBtn");
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerText = "جاري التحديث... ⏳";
         }
 
         let safeGrade = newGrade.replace(/\s+/g, '_');
@@ -469,14 +572,16 @@
             await db.ref(`lessons/${safeGrade}/${safeTeacher}/${safeUnit}/${lessonId}`).set({
                 lessonName: lessonName,
                 youtubeUrl: youtubeUrl,
+                createdAt: origCreatedAt ? parseInt(origCreatedAt) : Date.now(),
                 updatedAt: Date.now()
             });
 
-            alert("تم تحديث بيانات الدرس بنجاح! ✏️");
+            showToast("تم تحديث بيانات الدرس بنجاح! ✏️", "success");
             resetToAddNewLesson();
             loadLessonsData();
         } catch (e) {
-            alert("حدث خطأ أثناء التعديل.");
+            console.error(e);
+            showToast("حدث خطأ أثناء التعديل.", "error");
         }
     }
 
@@ -490,11 +595,12 @@
         if (confirm("هل أنت متأكد من حذف هذا الدرس نهائياً؟")) {
             try {
                 await db.ref(`lessons/${gradeKey}/${teacherKey}/${unitKey}/${lessonId}`).remove();
-                alert("تم حذف الدرس بنجاح.");
+                showToast("تم حذف الدرس بنجاح.", "success");
                 resetToAddNewLesson();
                 loadLessonsData();
             } catch (e) {
-                alert("حدث خطأ أثناء الحذف.");
+                console.error(e);
+                showToast("حدث خطأ أثناء الحذف.", "error");
             }
         }
     }
@@ -513,8 +619,8 @@
             <button id="cancelEditLessonBtn" class="delete-mode-btn">إلغاء</button>
         `;
 
-        document.getElementById("saveEditLessonBtn").addEventListener("click", saveEditedLesson);
-        document.getElementById("cancelEditLessonBtn").addEventListener("click", resetToAddNewLesson);
+        document.getElementById("saveEditLessonBtn").onclick = saveEditedLesson;
+        document.getElementById("cancelEditLessonBtn").onclick = resetToAddNewLesson;
     }
 
     // ربط الأحداث بالأزرار
@@ -546,7 +652,7 @@
     }
 
     window.onload = function() {
-        updateGradeDropdownBasedOnTeacher("إبراهيم الدوسري"); // تهيئة القائمة الافتراضية
+        updateGradeDropdownBasedOnTeacher("إبراهيم الدوسري");
         loadLessonsData();
         bindLessonActionButtons();
     };
