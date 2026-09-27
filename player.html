@@ -19,7 +19,6 @@
 
     <style>
         :root {
-            /* تخصيص اللون البرتقالي الرسمي لمنصة On Fire */
             --plyr-color-main: #ff6b00;
             --plyr-video-background: #000000;
         }
@@ -122,9 +121,12 @@
             overflow: hidden;
             background: #000;
             border: 2px solid #1f2937;
+            min-height: 480px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* درع حماية الشاشة لإخفاء عناصر يوتيوب العلوية ومنع الضغط عليها */
         .video-click-shield {
             position: absolute;
             top: 0;
@@ -137,7 +139,15 @@
         }
 
         .plyr {
+            width: 100%;
             border-radius: 10px;
+        }
+
+        iframe {
+            width: 100%;
+            height: 480px;
+            border: 0;
+            border-radius: 12px;
         }
     </style>
 
@@ -180,9 +190,8 @@
                 <h2 class="lesson-title" id="displayLessonTitle">جاري تحميل الدرس...</h2>
             </div>
 
-            <!-- حاوية المشغل الخاصة مع تعطيل كليك يمين -->
             <div class="custom-player-wrapper" id="mediaWrapper" oncontextmenu="return false;">
-                <div class="video-click-shield" id="clickShield" onclick="togglePlayPause()"></div>
+                <div class="video-click-shield" id="clickShield" onclick="togglePlayPause()" style="display:none;"></div>
                 <div id="plyrTarget"></div>
             </div>
         </div>
@@ -218,10 +227,10 @@
             return (match && match[1]) ? match[1] : null;
         }
 
-        // دالة جديدة لاستخراج ID فيديو Google Drive
+        // دالة شاملة لاستخراج معرّف ملف جوجل درايف من جميع أنواع الروابط
         function extractGoogleDriveId(url) {
             if (!url) return null;
-            const regExp = /(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]+)/;
+            const regExp = /(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)|lh3\.googleusercontent\.com\/d\/|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]+)/;
             const match = url.match(regExp);
             return (match && match[1]) ? match[1] : null;
         }
@@ -257,25 +266,15 @@
             
             let currentTargetUrl = rawUrl.trim();
 
-            // خيارات المشغل (تشمل أزرار التقديم والتأخير 10 ثوانٍ)
             const plyrControls = [
-                'play-large',
-                'rewind',       // زر -10 ثوانٍ
-                'play',         // زر التشغيل/الإيقاف
-                'fast-forward', // زر +10 ثوانٍ
-                'progress',     // شريط التقدم
-                'current-time', // الوقت الحالي
-                'duration',     // الوقت الإجمالي
-                'mute',
-                'volume',
-                'settings',
-                'fullscreen'
+                'play-large', 'rewind', 'play', 'fast-forward',
+                'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen'
             ];
 
             const ytId = extractYouTubeId(currentTargetUrl);
             const driveId = extractGoogleDriveId(currentTargetUrl);
 
-            // 1. إذا كان الفيديو من YouTube
+            // 1. فيديوهات يوتيوب
             if (ytId) {
                 shield.style.display = 'block';
                 wrapper.innerHTML = `
@@ -299,23 +298,18 @@
                 return;
             }
 
-            // 2. إذا كان الفيديو من Google Drive
+            // 2. فيديوهات جوجل درايف (تعرض مباشرة عبر iframe السريع والمضمون)
             if (driveId) {
                 shield.style.display = 'none';
-                const driveStreamUrl = `https://lh3.googleusercontent.com/d/${driveId}`;
                 wrapper.innerHTML = `
-                    <video id="plyrTarget" controls playsinline style="width:100%;">
-                        <source src="${driveStreamUrl}" type="video/mp4">
-                    </video>`;
-
-                plyrInstance = new Plyr('#plyrTarget', {
-                    controls: plyrControls,
-                    seekTime: 10
-                });
+                    <iframe src="https://drive.google.com/file/d/${driveId}/preview" 
+                            allow="autoplay; encrypted-media" 
+                            allowfullscreen>
+                    </iframe>`;
                 return;
             }
 
-            // 3. إذا كان الفيديو رابط مباشر (.mp4, .webm, .mov)
+            // 3. الفيديوهات المباشرة (.mp4 السادة أو الفايربيس ستوريدج)
             if (isDirectVideo(currentTargetUrl)) {
                 shield.style.display = 'none';
                 const cleanUrl = cleanMediaUrl(currentTargetUrl);
@@ -332,9 +326,9 @@
                 return;
             }
 
-            // 4. تضمين كـ iframe لأي روابط أخرى
+            // 4. أي رابط تضمين آخر
             shield.style.display = 'none';
-            wrapper.innerHTML = `<iframe src="${currentTargetUrl}" style="width:100%; height:450px; border:0;" allowfullscreen></iframe>`;
+            wrapper.innerHTML = `<iframe src="${currentTargetUrl}" allowfullscreen></iframe>`;
         }
 
         window.onload = function() {
@@ -344,7 +338,6 @@
             if (rawUrl) renderPlayer(rawUrl);
         };
 
-        // اختصارات الكيبورد (الأسهم للتقديم والتأخير بـ 10 ثوانٍ والمسطرة للتشغيل)
         document.addEventListener('keydown', function(e) {
             if (!plyrInstance) return;
             if (e.code === 'ArrowRight') {
@@ -357,7 +350,6 @@
             }
         });
 
-        // زر العودة الذكي والمضمون
         function goBack() {
             const fromParam = getSmartParam('from');
             if (fromParam) {
