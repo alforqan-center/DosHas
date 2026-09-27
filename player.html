@@ -127,6 +127,7 @@
             justify-content: center;
         }
 
+        /* درع حماية يوتيوب */
         .video-click-shield {
             position: absolute;
             top: 0;
@@ -136,6 +137,18 @@
             z-index: 10;
             cursor: pointer;
             background: rgba(0,0,0,0);
+        }
+
+        /* درع حماية أزرار درايف العلوية (يمنع الضغط على زر فتح في نافذة خارجية والتنزيل) */
+        .drive-popout-shield {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 85px;
+            height: 60px;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0);
+            cursor: default;
         }
 
         .plyr {
@@ -227,7 +240,6 @@
             return (match && match[1]) ? match[1] : null;
         }
 
-        // دالة شاملة لاستخراج معرّف ملف جوجل درايف من جميع أنواع الروابط
         function extractGoogleDriveId(url) {
             if (!url) return null;
             const regExp = /(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)|lh3\.googleusercontent\.com\/d\/|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]+)/;
@@ -298,10 +310,11 @@
                 return;
             }
 
-            // 2. فيديوهات جوجل درايف (تعرض مباشرة عبر iframe السريع والمضمون)
+            // 2. فيديوهات جوجل درايف مع طبقة حماية شفافة على زر الفتح الخارجي
             if (driveId) {
                 shield.style.display = 'none';
                 wrapper.innerHTML = `
+                    <div class="drive-popout-shield"></div>
                     <iframe src="https://drive.google.com/file/d/${driveId}/preview" 
                             allow="autoplay; encrypted-media" 
                             allowfullscreen>
@@ -309,7 +322,7 @@
                 return;
             }
 
-            // 3. الفيديوهات المباشرة (.mp4 السادة أو الفايربيس ستوريدج)
+            // 3. الفيديوهات المباشرة
             if (isDirectVideo(currentTargetUrl)) {
                 shield.style.display = 'none';
                 const cleanUrl = cleanMediaUrl(currentTargetUrl);
