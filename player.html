@@ -218,6 +218,14 @@
             return (match && match[1]) ? match[1] : null;
         }
 
+        // دالة جديدة لاستخراج ID فيديو Google Drive
+        function extractGoogleDriveId(url) {
+            if (!url) return null;
+            const regExp = /(?:drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)|docs\.google\.com\/file\/d\/)([a-zA-Z0-9_-]+)/;
+            const match = url.match(regExp);
+            return (match && match[1]) ? match[1] : null;
+        }
+
         function cleanMediaUrl(url) {
             try {
                 let parsed = new URL(url);
@@ -265,6 +273,9 @@
             ];
 
             const ytId = extractYouTubeId(currentTargetUrl);
+            const driveId = extractGoogleDriveId(currentTargetUrl);
+
+            // 1. إذا كان الفيديو من YouTube
             if (ytId) {
                 shield.style.display = 'block';
                 wrapper.innerHTML = `
@@ -274,7 +285,7 @@
 
                 plyrInstance = new Plyr('#plyrTarget', {
                     controls: plyrControls,
-                    seekTime: 10, // تحديد زمن التقديم والتأخير بـ 10 ثوانٍ
+                    seekTime: 10,
                     youtube: { 
                         noCookie: true, 
                         rel: 0, 
@@ -288,6 +299,23 @@
                 return;
             }
 
+            // 2. إذا كان الفيديو من Google Drive
+            if (driveId) {
+                shield.style.display = 'none';
+                const driveStreamUrl = `https://lh3.googleusercontent.com/d/${driveId}`;
+                wrapper.innerHTML = `
+                    <video id="plyrTarget" controls playsinline style="width:100%;">
+                        <source src="${driveStreamUrl}" type="video/mp4">
+                    </video>`;
+
+                plyrInstance = new Plyr('#plyrTarget', {
+                    controls: plyrControls,
+                    seekTime: 10
+                });
+                return;
+            }
+
+            // 3. إذا كان الفيديو رابط مباشر (.mp4, .webm, .mov)
             if (isDirectVideo(currentTargetUrl)) {
                 shield.style.display = 'none';
                 const cleanUrl = cleanMediaUrl(currentTargetUrl);
@@ -304,6 +332,7 @@
                 return;
             }
 
+            // 4. تضمين كـ iframe لأي روابط أخرى
             shield.style.display = 'none';
             wrapper.innerHTML = `<iframe src="${currentTargetUrl}" style="width:100%; height:450px; border:0;" allowfullscreen></iframe>`;
         }
@@ -342,7 +371,7 @@
             if (window.history.length > 1) {
                 window.history.back();
             } else {
-                window.location.href = "first-prep.html"; // صفحة افتراضية في حال عدم فتح الصفحة من رابط سابق
+                window.location.href = "first-prep.html";
             }
         }
     </script>
