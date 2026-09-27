@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On Fire Academy - مشغل الدروس</title>
+    <link rel="icon" type="image/jpeg" href="https://i.postimg.cc/Fz97Zty5/Whats-App-Image-2026-09-10-at-2-49-35-AM.jpg">
+    
+    <!-- استيراد الخطوط الرسمية -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,800;0,900;1,800&family=Cairo:wght@600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- استيراد مكتبة Plyr -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+
+    <!-- استيراد مكتبة فايربيس للفحص والأمان -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --plyr-color-main: #ff6b00;
+            --plyr-video-background: #000000;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #0b0f19;
+            color: #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.05) 0%, rgba(11, 15, 25, 0.95) 100%);
+            z-index: -1;
+        }
+        header {
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #1e293b;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .site-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #ff6b00;
+            box-shadow: 0 0 12px rgba(255, 107, 0, 0.3);
+            background-color: #000;
+            flex-shrink: 0;
+        }
+        .site-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .logo-area h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #ffffff;
+        }
+        .logo-area h1 .fire-text {
+            background: linear-gradient(135deg, #ff7700 0%, #ff3b00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(255, 85, 0, 0.3);
+        }
+        .logo-area span.academy-text {
+            font-family: 'Cairo', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 2px;
+            margin-right: 6px;
+        }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .back-btn {
+            background-color: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid #334155;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-btn:hover {
+            border-color: #ff6b00;
+            color: #fff;
+            background-color: #334155;
+        }
+        .logout-btn {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover {
+            background-color: #ef4444;
+            color: white;
+        }
+        .container {
+            flex: 1;
+            max-width: 980px;
+            margin: 30px auto;
+            padding: 0 20px;
+            width: 100%;
+        }
+        .player-card {
+            background: #111827;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.7);
+            border: 1px solid #1f2937;
+        }
+        .lesson-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #1e293b;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .lesson-title-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .lesson-icon {
+            font-size: 24px;
+        }
+        .lesson-title {
+            color: #f9fafb;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.4;
+        }
+        
+        /* حاوية المشغل الخاصة بـ On Fire */
+        .custom-player-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            border: 2px solid #1f2937;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+        }
+
+        .responsive-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .responsive-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        
+        .plyr {
+            border-radius: 10px;
+        }
+
+        .player-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px dashed #1e293b;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .control-btn {
+            background: linear-gradient(135deg, #ff6b00, #e65c00);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .control-btn:hover {
+            background: linear-gradient(135deg, #e65c00, #cc5200);
+        }
+        .secondary-btn {
+            background: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid #334155;
+            box-shadow: none;
+        }
+        .secondary-btn:hover {
+            background: #334155;
+            color: #fff;
+        }
+        .error-card {
+            text-align: center;
+            padding: 40px 20px;
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #0f172a;
+            color: #64748b;
+            font-size: 12px;
+            border-top: 1px solid #1e293b;
+            margin-top: auto;
+        }
+    </style>
+
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://doshas-e5d12-default-rtdb.firebaseio.com/"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const guardDb = firebase.database();
+
+        async function checkStudentSession() {
+            const activeCode = localStorage.getItem('activeStudentCode');
+            if (!activeCode) {
+                window.location.href = "index.html";
+                return;
+            }
+
+            try {
+                const adminSnap = await guardDb.ref('settings/adminCode').once('value');
+                if (adminSnap.exists() && activeCode === adminSnap.val()) return;
+
+                const snap = await guardDb.ref('codes/' + activeCode).once('value');
+                if (!snap.exists()) {
+                    localStorage.removeItem('activeStudentCode');
+                    window.location.href = "index.html?expired=true";
+                    return;
+                }
+
+                const data = snap.val();
+                let status = data.status ? data.status.toString().trim().toLowerCase() : 'active';
+
+                if (status === 'inactive' || status === 'stopped' || status === 'false') {
+                    localStorage.removeItem('activeStudentCode');
+                    window.location.href = "index.html?expired=true";
+                    return;
+                }
+            } catch (e) {
+                console.log("فحص الجلسة يعمل بنجاح...");
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', checkStudentSession);
+    </script>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <div class="site-logo">
+                <img src="https://i.postimg.cc/Fz97Zty5/Whats-App-Image-2026-09-10-at-2-49-35-AM.jpg" alt="On Fire Logo">
+            </div>
+            <h1><span class="fire-text">On Fire</span> <span class="academy-text">ACADEMY</span></h1>
+        </div>
+        <div class="header-actions">
+            <button class="back-btn" onclick="goBack()">← العودة للدروس</button>
+            <button class="logout-btn" onclick="logout()">خروج</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="player-card">
+            <div class="lesson-header">
+                <div class="lesson-title-container">
+                    <span class="lesson-icon">🎬</span>
+                    <h2 class="lesson-title" id="displayLessonTitle">جاري تحميل الدرس...</h2>
+                </div>
+            </div>
+
+            <!-- حاوية المشغل -->
+            <div id="playerContainer">
+                <div class="custom-player-wrapper" id="mediaWrapper">
+                    <!-- سيتم تحضير مشغل الفيديو هنا -->
+                </div>
+            </div>
+
+            <!-- رسالة الخطأ -->
+            <div id="errorContainer" class="error-card" style="display: none;">
+                <h3>⚠️ تعذر تشغيل الدرس</h3>
+                <p>رابط الدرس غير صحيح أو يحتوي على قيود من المصدر.</p>
+                <button class="control-btn secondary-btn" style="margin-top: 15px;" onclick="goBack()">العودة لقائمة الدروس</button>
+            </div>
+
+            <div class="player-controls">
+                <button class="control-btn secondary-btn" onclick="reloadVideo()">🔄 إعادة تحميل الدرس</button>
+                <button class="control-btn" onclick="goBack()">العودة للدروس 🎯</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        جميع الحقوق محفوظة © On Fire Academy 2026
+    </footer>
+
+    <script>
+        let plyrInstance = null;
+        let currentTargetUrl = '';
+
+        function getSmartQueryParam(paramName) {
+            const href = window.location.href;
+            const key = paramName + '=';
+            const startIdx = href.indexOf(key);
+            if (startIdx === -1) return null;
+
+            let valStart = startIdx + key.length;
+            let valEnd = href.length;
+
+            if (paramName === 'url') {
+                const nextTitle = href.indexOf('&title=', valStart);
+                if (nextTitle !== -1) valEnd = nextTitle;
+            } else if (paramName === 'title') {
+                const nextUrl = href.indexOf('&url=', valStart);
+                if (nextUrl !== -1) valEnd = nextUrl;
+            }
+
+            const rawVal = href.substring(valStart, valEnd);
+            try {
+                return decodeURIComponent(rawVal);
+            } catch(e) {
+                return rawVal;
+            }
+        }
+
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            const regExp = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/;
+            const match = url.match(regExp);
+            if (match && match[1]) return match[1];
+            if (url.length === 11 && !url.includes('/') && !url.includes('.')) return url;
+            return null;
+        }
+
+        function extractGoogleDriveId(url) {
+            if (!url || !url.includes('drive.google.com')) return null;
+            const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (match1 && match1[1]) return match1[1];
+            const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (match2 && match2[1]) return match2[1];
+            return null;
+        }
+
+        function isDirectVideo(url) {
+            if (!url) return false;
+            const clean = url.split('?')[0].toLowerCase();
+            return clean.endsWith('.mp4') || clean.endsWith('.webm') || clean.endsWith('.ogg') || clean.endsWith('.mov') || clean.endsWith('.m3u8');
+        }
+
+        function renderCustomPlayer(url) {
+            const wrapper = document.getElementById('mediaWrapper');
+            if (plyrInstance) {
+                plyrInstance.destroy();
+                plyrInstance = null;
+            }
+
+            currentTargetUrl = url.trim();
+
+            // 1. معالجة يوتيوب بحل تخطي خطأ 153 وعرضه داخل النافذة
+            const ytId = extractYouTubeId(currentTargetUrl);
+            if (ytId) {
+                const currentOrigin = encodeURIComponent(window.location.origin || "https://" + window.location.host);
+                wrapper.innerHTML = `
+                    <div class="responsive-container">
+                        <iframe 
+                            src="https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${currentOrigin}" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                `;
+                return;
+            }
+
+            // 2. معالجة الفيديو المباشر (Railway MP4) عبر مشغل Plyr
+            if (isDirectVideo(currentTargetUrl)) {
+                wrapper.innerHTML = `
+                    <video id="plyrTarget" controls playsinline style="width:100%; height:100%;">
+                        <source src="${currentTargetUrl}" type="video/mp4" />
+                        متصفحك لا يدعم تشغيل هذا الفيديو.
+                    </video>
+                `;
+                plyrInstance = new Plyr('#plyrTarget', {
+                    controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings', 'pip', 'fullscreen']
+                });
+                return;
+            }
+
+            // 3. جوجل درايف
+            const driveId = extractGoogleDriveId(currentTargetUrl);
+            if (driveId) {
+                wrapper.innerHTML = `
+                    <div class="responsive-container">
+                        <iframe src="https://drive.google.com/file/d/${driveId}/preview" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                    </div>
+                `;
+                return;
+            }
+
+            // 4. أية مصادر إضافية
+            wrapper.innerHTML = `
+                <div class="responsive-container">
+                    <iframe src="${currentTargetUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                </div>
+            `;
+        }
+
+        window.onload = function() {
+            const rawUrl = getSmartQueryParam('url');
+            const rawTitle = getSmartQueryParam('title');
+
+            const titleEl = document.getElementById('displayLessonTitle');
+            if (rawTitle) {
+                titleEl.innerText = rawTitle;
+            } else {
+                titleEl.innerText = "مشاهدة الدرس";
+            }
+
+            if (rawUrl) {
+                renderCustomPlayer(rawUrl);
+            } else {
+                showError();
+            }
+        };
+
+        function showError() {
+            document.getElementById('playerContainer').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'block';
+        }
+
+        function reloadVideo() {
+            if (currentTargetUrl) {
+                renderCustomPlayer(currentTargetUrl);
+            }
+        }
+
+        function goBack() {
+            if (document.referrer && document.referrer.includes(window.location.host)) {
+                window.history.back();
+            } else {
+                window.location.href = "first-prep.html";
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('activeStudentCode');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
