@@ -19,7 +19,6 @@
 
     <style>
         :root {
-            /* تخصيص ألوان الأزرار لتطابق On Fire */
             --plyr-color-main: #ff6b00;
             --plyr-video-background: #000000;
         }
@@ -28,7 +27,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Cairo', sans-serif;
-            user-select: none; /* منع تحديد النصوص */
+            user-select: none;
         }
         body {
             background-color: #0b0f19;
@@ -71,6 +70,25 @@
         .logo-area h1 span {
             color: #ff6b00;
         }
+        .back-nav-btn {
+            background: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid #334155;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-nav-btn:hover {
+            background-color: #ff6b00;
+            border-color: #ff6b00;
+            color: #fff;
+        }
         .container {
             flex: 1;
             max-width: 950px;
@@ -96,7 +114,6 @@
             font-weight: 700;
         }
         
-        /* حاوية المشغل الخاصة */
         .custom-player-wrapper {
             position: relative;
             width: 100%;
@@ -106,13 +123,12 @@
             border: 2px solid #1f2937;
         }
 
-        /* درع حماية الشاشة لتشغيل/إيقاف الفيديو ومنع الضغط على روابط يوتيوب */
         .video-click-shield {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: calc(100% - 50px); /* يغطي كل شيء ما عدا أزرار التحكم بالأسفل */
+            height: calc(100% - 50px);
             z-index: 5;
             cursor: pointer;
             background: rgba(0,0,0,0);
@@ -121,30 +137,6 @@
         .plyr {
             border-radius: 10px;
         }
-
-        .player-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .control-btn {
-            background: #ff6b00;
-            color: white;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 13px;
-            text-decoration: none;
-            transition: 0.2s;
-        }
-        .control-btn:hover { background: #e65c00; }
-        .secondary-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
-        .secondary-btn:hover { background: #334155; color: #fff; }
     </style>
 
     <script>
@@ -177,7 +169,7 @@
             </div>
             <h1>On <span>Fire</span> ACADEMY</h1>
         </div>
-        <button class="control-btn secondary-btn" onclick="goBack()">← العودة</button>
+        <button class="back-nav-btn" onclick="goBack()">← العودة للدروس</button>
     </header>
 
     <div class="container">
@@ -186,23 +178,16 @@
                 <h2 class="lesson-title" id="displayLessonTitle">جاري العرض...</h2>
             </div>
 
-            <!-- حاوية المشغل مع منع كليك يمين -->
+            <!-- حاوية المشغل -->
             <div class="custom-player-wrapper" id="mediaWrapper" oncontextmenu="return false;">
-                <!-- درع حماية يمنع الضغط على روابط يوتيوب العلوية -->
                 <div class="video-click-shield" id="clickShield" onclick="togglePlayPause()"></div>
                 <div id="plyrTarget"></div>
-            </div>
-
-            <div class="player-controls">
-                <button class="control-btn secondary-btn" onclick="reloadVideo()">🔄 تحديث المشغل</button>
-                <button class="control-btn" onclick="goBack()">العودة للدروس 🎯</button>
             </div>
         </div>
     </div>
 
     <script>
         let plyrInstance = null;
-        let currentTargetUrl = '';
 
         function getSmartParam(paramName) {
             const href = window.location.href;
@@ -215,7 +200,11 @@
             if (paramName === 'url') {
                 const nextTitle = href.indexOf('&title=', valStart);
                 if (nextTitle !== -1) valEnd = nextTitle;
+            } else if (paramName === 'title') {
+                const nextFrom = href.indexOf('&from=', valStart);
+                if (nextFrom !== -1) valEnd = nextFrom;
             }
+
             const rawVal = href.substring(valStart, valEnd);
             try { return decodeURIComponent(rawVal); } catch(e) { return rawVal; }
         }
@@ -241,7 +230,6 @@
             return clean.endsWith('.mp4') || clean.endsWith('.webm') || clean.endsWith('.mov');
         }
 
-        // تشغيل/إيقاف الفيديو عند الضغط على الشاشة الشفافة
         function togglePlayPause() {
             if (plyrInstance) {
                 plyrInstance.togglePlay();
@@ -257,12 +245,11 @@
                 plyrInstance = null; 
             }
             
-            currentTargetUrl = rawUrl.trim();
+            let currentTargetUrl = rawUrl.trim();
 
-            // 1. تشغيل يوتيوب داخل واجهة Plyr المخصصة فقط
             const ytId = extractYouTubeId(currentTargetUrl);
             if (ytId) {
-                shield.style.display = 'block'; // تفعيل الدرع الواقي
+                shield.style.display = 'block';
                 wrapper.innerHTML = `
                     <div class="video-click-shield" onclick="togglePlayPause()"></div>
                     <div id="plyrTarget" data-plyr-provider="youtube" data-plyr-embed-id="${ytId}"></div>
@@ -282,9 +269,8 @@
                 return;
             }
 
-            // 2. تشغيل الفيديو المباشر (.mp4) مثل Railway
             if (isDirectVideo(currentTargetUrl)) {
-                shield.style.display = 'none'; // لا نحتاج درع مع الميديا المباشرة
+                shield.style.display = 'none';
                 const cleanUrl = cleanMediaUrl(currentTargetUrl);
                 wrapper.innerHTML = `
                     <video id="plyrTarget" controls playsinline style="width:100%;">
@@ -298,7 +284,6 @@
                 return;
             }
 
-            // 3. التضمين الاحتياطي
             shield.style.display = 'none';
             wrapper.innerHTML = `<iframe src="${currentTargetUrl}" style="width:100%; height:450px; border:0;" allowfullscreen></iframe>`;
         }
@@ -310,8 +295,20 @@
             if (rawUrl) renderPlayer(rawUrl);
         };
 
-        function reloadVideo() { if (currentTargetUrl) renderPlayer(currentTargetUrl); }
-        function goBack() { window.history.back(); }
+        // العودة الذكية للصفحة التي جاء منها الطالب
+        function goBack() {
+            const fromParam = getSmartParam('from');
+            if (fromParam) {
+                window.location.href = fromParam;
+                return;
+            }
+
+            if (document.referrer && document.referrer.includes(window.location.host)) {
+                window.history.back();
+            } else {
+                window.location.href = "first-prep.html";
+            }
+        }
     </script>
 </body>
 </html>
