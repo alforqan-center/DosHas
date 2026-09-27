@@ -19,6 +19,7 @@
 
     <style>
         :root {
+            /* تخصيص اللون البرتقالي الرسمي لمنصة On Fire */
             --plyr-color-main: #ff6b00;
             --plyr-video-background: #000000;
         }
@@ -123,13 +124,14 @@
             border: 2px solid #1f2937;
         }
 
+        /* درع حماية الشاشة لإخفاء عناصر يوتيوب العلوية ومنع الضغط عليها */
         .video-click-shield {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: calc(100% - 50px);
-            z-index: 5;
+            z-index: 10;
             cursor: pointer;
             background: rgba(0,0,0,0);
         }
@@ -175,10 +177,10 @@
     <div class="container">
         <div class="player-card">
             <div class="lesson-header">
-                <h2 class="lesson-title" id="displayLessonTitle">جاري العرض...</h2>
+                <h2 class="lesson-title" id="displayLessonTitle">جاري تحميل الدرس...</h2>
             </div>
 
-            <!-- حاوية المشغل -->
+            <!-- حاوية المشغل الخاصة مع تعطيل كليك يمين -->
             <div class="custom-player-wrapper" id="mediaWrapper" oncontextmenu="return false;">
                 <div class="video-click-shield" id="clickShield" onclick="togglePlayPause()"></div>
                 <div id="plyrTarget"></div>
@@ -247,23 +249,40 @@
             
             let currentTargetUrl = rawUrl.trim();
 
+            // خيارات المشغل (تشمل أزرار التقديم والتأخير 10 ثوانٍ)
+            const plyrControls = [
+                'play-large',
+                'rewind',       // زر -10 ثوانٍ
+                'play',         // زر التشغيل/الإيقاف
+                'fast-forward', // زر +10 ثوانٍ
+                'progress',     // شريط التقدم
+                'current-time', // الوقت الحالي
+                'duration',     // الوقت الإجمالي
+                'mute',
+                'volume',
+                'settings',
+                'fullscreen'
+            ];
+
             const ytId = extractYouTubeId(currentTargetUrl);
             if (ytId) {
                 shield.style.display = 'block';
                 wrapper.innerHTML = `
-                    <div class="video-click-shield" onclick="togglePlayPause()"></div>
+                    <div class="video-click-shield" id="clickShield" onclick="togglePlayPause()"></div>
                     <div id="plyrTarget" data-plyr-provider="youtube" data-plyr-embed-id="${ytId}"></div>
                 `;
 
                 plyrInstance = new Plyr('#plyrTarget', {
-                    controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings', 'pip', 'fullscreen'],
+                    controls: plyrControls,
+                    seekTime: 10, // تحديد زمن التقديم والتأخير بـ 10 ثوانٍ
                     youtube: { 
                         noCookie: true, 
                         rel: 0, 
                         showinfo: 0, 
                         iv_load_policy: 3, 
                         modestbranding: 1,
-                        controls: 0
+                        controls: 0,
+                        disablekb: 1
                     }
                 });
                 return;
@@ -279,7 +298,8 @@
                     </video>`;
 
                 plyrInstance = new Plyr('#plyrTarget', {
-                    controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings', 'pip', 'fullscreen']
+                    controls: plyrControls,
+                    seekTime: 10
                 });
                 return;
             }
@@ -295,18 +315,34 @@
             if (rawUrl) renderPlayer(rawUrl);
         };
 
-        // العودة الذكية للصفحة التي جاء منها الطالب
+        // اختصارات الكيبورد (الأسهم للتقديم والتأخير بـ 10 ثوانٍ والمسطرة للتشغيل)
+        document.addEventListener('keydown', function(e) {
+            if (!plyrInstance) return;
+            if (e.code === 'ArrowRight') {
+                plyrInstance.forward(10);
+            } else if (e.code === 'ArrowLeft') {
+                plyrInstance.rewind(10);
+            } else if (e.code === 'Space') {
+                e.preventDefault();
+                plyrInstance.togglePlay();
+            }
+        });
+
+        // زر العودة الذكي والمضمون
         function goBack() {
             const fromParam = getSmartParam('from');
             if (fromParam) {
                 window.location.href = fromParam;
                 return;
             }
-
-            if (document.referrer && document.referrer.includes(window.location.host)) {
+            if (document.referrer && document.referrer.trim() !== '' && document.referrer.includes(window.location.host)) {
+                window.location.href = document.referrer;
+                return;
+            }
+            if (window.history.length > 1) {
                 window.history.back();
             } else {
-                window.location.href = "first-prep.html";
+                window.location.href = "first-prep.html"; // صفحة افتراضية في حال عدم فتح الصفحة من رابط سابق
             }
         }
     </script>
