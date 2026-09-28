@@ -20,20 +20,19 @@
             background-color: #0b0f19;
             color: #cbd5e1;
             margin: 0;
-            padding: 0; /* إزالة أي هوامش خارجية للصفحة عشان تملى المساحة بالكامل */
+            padding: 0;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
             width: 100%;
         }
-        /* إلغاء أي حواف ضيقة أو حاويات محشورة - جعل الصفحة تأخذ المساحة بالكامل */
         .container {
             width: 100%;
             max-width: 100%;
             margin: 0;
             background: #111827;
             padding: 25px;
-            border-radius: 0; /* بدون حواف دائرية عشان تندمج مع الموقع كجزء منه */
+            border-radius: 0;
             box-shadow: none;
             border: none;
             border-bottom: 1px solid #1f2937;
@@ -192,7 +191,6 @@
         #toast.error { border-color: #ef4444; background: #7f1d1d; color: #fecaca; }
         #toast.info { border-color: #3b82f6; background: #1e3a8a; color: #bfdbfe; }
 
-        /* تعديلات للموبايل والشاشات الضيقة */
         @media (max-width: 768px) {
             .container { padding: 15px; }
             .action-buttons { grid-template-columns: 1fr; }
@@ -223,7 +221,6 @@
 
     <!-- نموذج بيانات الدرس -->
     <div class="form-section">
-        <!-- حقول مخفية لحفظ المسارات والبيانات القديمة عند التعديل -->
         <input type="hidden" id="originalLessonId" value="">
         <input type="hidden" id="originalGrade" value="">
         <input type="hidden" id="originalTeacher" value="">
@@ -242,32 +239,22 @@
         <!-- حقل الصف الدراسي -->
         <div class="form-group">
             <label>الصف الدراسي:</label>
-            <select id="gradeSelect">
-                <option value="أولى إعدادي">أولى إعدادي</option>
-                <option value="ثانية إعدادي">ثانية إعدادي</option>
-                <option value="ثالثة إعدادي">ثالثة إعدادي</option>
-                <option value="أولى ثانوي">أولى ثانوي</option>
-                <option value="ثانية ثانوي">ثانية ثانوي</option>
-                <option value="ثالثة ثانوي">ثالثة ثانوي</option>
-            </select>
+            <select id="gradeSelect"></select>
         </div>
 
+        <!-- حقل الوحدة الدراسية -->
         <div class="form-group">
             <label>الوحدة الدراسية:</label>
-            <select id="unitSelect">
-                <option value="الوحدة الأولى">الوحدة الأولى</option>
-                <option value="الوحدة الثانية">الوحدة الثانية</option>
-                <option value="الوحدة الثالثة">الوحدة الثالثة</option>
-                <option value="الوحدة الرابعة">الوحدة الرابعة</option>
-                <option value="الوحدة الخامسة">الوحدة الخامسة</option>
-            </select>
+            <select id="unitSelect"></select>
         </div>
 
+        <!-- حقل رقم واسم الدرس (قائمة اختيار) -->
         <div class="form-group">
-            <label>اسم الدرس:</label>
-            <input type="text" id="lessonNameInput" placeholder="أدخل اسم الدرس..." autocomplete="off">
+            <label>اختر الدرس:</label>
+            <select id="lessonSelect"></select>
         </div>
 
+        <!-- حقل لينك يوتيوب -->
         <div class="form-group">
             <label>لينك فيديو اليوتيوب (غير مدرج / عادي):</label>
             <input type="text" id="youtubeUrlInput" placeholder="الصق لينك يوتيوب هنا..." autocomplete="off">
@@ -300,7 +287,74 @@
 
     let allLessonsCache = [];
 
-    // دالة لعرض التنبيهات العائمة (Toast)
+    // مناهج مستر إبراهيم الدوسري
+    const ibrahimCurriculum = {
+        "أولى إعدادي": {
+            "الوحدة الأولى: إفريقيا وحضاراتها القديمة": [
+                "الدرس الأول: قارة إفريقيا (الموقع والكشوف الجغرافية)",
+                "الدرس الثاني: مظاهر سطح قارة إفريقيا",
+                "الدرس الثالث: نهر النيل والحضارات القديمة في إفريقيا"
+            ],
+            "الوحدة الثانية: الحضارة المصرية القديمة وعلاقتها بحضارات إفريقيا": [
+                "الدرس الأول: عصر الدولة القديمة (عصر بناة الأهرام)",
+                "الدرس الثاني: عصر الدولة الوسطى (عصر الرخاء الاقتصادي)",
+                "الدرس الثالث: عصر الدولة الحديثة (عصر المجد الحربي)"
+            ],
+            "الوحدة الثالثة: النظم البيئية في قارة إفريقيا": [
+                "الدرس الأول: نظم الغابات في إفريقيا (الغابات المدارية المطيرة وغابات البحر المتوسط)",
+                "الدرس الثاني: نظم الحشائش (الحارة والمعتدلة) والصحاري الحارة في إفريقيا",
+                "الدرس الثالث: النظم البيئية المائية في إفريقيا"
+            ],
+            "الوحدة الرابعة: علاقة مصر بإفريقيا خلال العصور الوسطى": [
+                "الدرس الأول: انتشار الإسلام في إفريقيا",
+                "الدرس الثاني: دور مصر الحضاري في قارة إفريقيا"
+            ]
+        },
+        "ثانية إعدادي": {
+            "الوحدة الأولى: الملامح الطبيعية لقارتي آسيا وأوروبا": [
+                "الدرس الأول: موقع ومظاهر سطح قارتي آسيا وأوروبا",
+                "الدرس الثاني: المعادن ومصادر الطاقة في قارتي آسيا وأوروبا"
+            ],
+            "الوحدة الثانية: الحضارات القديمة في قارة آسيا وعلاقتها بمصر": [
+                "الدرس الأول: نماذج للحضارات القديمة بالشرق الأدنى",
+                "الدرس الثاني: نماذج للحضارات بلاد اليمن القديم",
+                "الدرس الثالث: نماذج للحضارات القديمة بالشرق الأقصى",
+                "الدرس الرابع: الحضارة الإسلامية"
+            ],
+            "الوحدة الثالثة: النُّظُم البيئية في قارتي آسيا وأوروبا": [
+                "الدرس الأول: نُظُم الغابات في قارتي آسيا وأوروبا",
+                "الدرس الثاني: نُظُم الحشائش ونُظُم الصحاري في قارتي آسيا وأوروبا",
+                "الدرس الثالث: النُّظُم البيئية المائية في قارتي آسيا وأوروبا"
+            ],
+            "الوحدة الرابعة: الحضارات القديمة في قارة أوروبا وعلاقتها بمصر": [
+                "الدرس الأول: الحضارة اليونانية",
+                "الدرس الثاني: الحضارة الرومانية"
+            ]
+        },
+        "ثالثة إعدادي": {
+            "الوحدة الأولى: الملامح الطبيعية والحضارية لقارات العالم الجديد": [
+                "الدرس الأول: موقع ومظاهر سطح قارات العالم الجديد",
+                "الدرس الثاني: الحضارات القديمة في الأمريكتين",
+                "الدرس الثالث: الكشوف الجغرافية لقارات العالم الجديد"
+            ],
+            "الوحدة الثانية: مصر في عصر «محمد علي» وخلفائه": [
+                "الدرس الأول: تولية «محمد علي» حكم مصر وتثبيت دعائم حكمه",
+                "الدرس الثاني: «محمد علي» وبناء الدولة الحديثة في مصر",
+                "الدرس الثالث: مصر في عصر خلفاء «محمد علي»"
+            ],
+            "الوحدة الثالثة: النُّظُم البيئية في قارات العالم الجديد": [
+                "الدرس الأول: نُظُم الغابات والحشائش في قارات العالم الجديد",
+                "الدرس الثاني: النُّظُم البيئية الصحراوية والمائية في قارات العالم الجديد",
+                "الدرس الثالث: التغير المناخي وتأثيره على النُّظُم البيئية"
+            ],
+            "الوحدة الرابعة: الحركة الوطنية في مواجهة الاحتلال البريطاني": [
+                "الدرس الأول: الثورة العرابية وبداية الاحتلال البريطاني لمصر",
+                "الدرس الثاني: كفاح الحركة الوطنية وبناء الوعي الوطني (مصطفى كامل ومحمد فريد)"
+            ]
+        }
+    };
+
+    // دالة لعرض التنبيهات العائمة
     function showToast(message, type = 'info') {
         const toast = document.getElementById("toast");
         toast.className = `show ${type}`;
@@ -310,7 +364,7 @@
         }, 3200);
     }
 
-    // دالة لتوحيد النصوص العربية (Arabic Normalization) لضمان دقة البحث
+    // دالة لتوحيد النصوص العربية لضمان دقة البحث
     function normalizeArabicText(text) {
         if (!text) return '';
         return text
@@ -322,8 +376,92 @@
             .trim();
     }
 
-    // دالة لتحديث وعرض خيارات الصفوف بناءً على المدرس المختار
-    function updateGradeDropdownBasedOnTeacher(selectedTeacher, targetGrade = null) {
+    // تحديث قائمة الدروس المتاحة بناءً على الوحدة والمدرس والصف
+    function updateLessonDropdownBasedOnUnit(selectedUnit, targetLesson = null) {
+        const lessonSelect = document.getElementById("lessonSelect");
+        const teacher = document.getElementById("teacherSelect").value;
+        const grade = document.getElementById("gradeSelect").value;
+        
+        let currentLesson = targetLesson || lessonSelect.value;
+        lessonSelect.innerHTML = "";
+
+        let lessonsList = [];
+
+        if (teacher === "إبراهيم الدوسري" && ibrahimCurriculum[grade] && ibrahimCurriculum[grade][selectedUnit]) {
+            lessonsList = ibrahimCurriculum[grade][selectedUnit];
+        } else {
+            // القائمة الافتراضية للحالات الأخرى
+            lessonsList = [
+                `الدرس الأول في ${selectedUnit}`,
+                `الدرس الثاني في ${selectedUnit}`,
+                `الدرس الثالث في ${selectedUnit}`,
+                `الدرس الرابع في ${selectedUnit}`
+            ];
+        }
+
+        lessonsList.forEach(lessonName => {
+            let option = document.createElement("option");
+            option.value = lessonName;
+            option.textContent = lessonName;
+            lessonSelect.appendChild(option);
+        });
+
+        let options = Array.from(lessonSelect.options).map(o => o.value);
+        if (currentLesson && options.includes(currentLesson)) {
+            lessonSelect.value = currentLesson;
+        } else if (lessonSelect.options.length > 0) {
+            lessonSelect.selectedIndex = 0;
+        }
+    }
+
+    // تحديث الوحدات الدراسية بناءً على الصف والمدرس المختار
+    function updateUnitDropdownBasedOnGrade(selectedGrade, targetUnit = null, targetLesson = null) {
+        const unitSelect = document.getElementById("unitSelect");
+        const teacher = document.getElementById("teacherSelect").value;
+        let currentUnit = targetUnit || unitSelect.value;
+        unitSelect.innerHTML = "";
+
+        if (teacher === "إبراهيم الدوسري" && ibrahimCurriculum[selectedGrade]) {
+            Object.keys(ibrahimCurriculum[selectedGrade]).forEach(unitName => {
+                let option = document.createElement("option");
+                option.value = unitName;
+                option.textContent = unitName;
+                unitSelect.appendChild(option);
+            });
+        } else {
+            let totalUnits = 4;
+            if (selectedGrade.includes("إعدادي")) {
+                totalUnits = 3;
+            } else if (selectedGrade === "ثالثة ثانوي") {
+                totalUnits = 5;
+            } else if (selectedGrade === "أولى ثانوي" || selectedGrade === "ثانية ثانوي") {
+                totalUnits = 4;
+            }
+
+            const numbersArabic = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة"];
+
+            for (let i = 0; i < totalUnits; i++) {
+                let unitName = `الوحدة ${numbersArabic[i]}`;
+                let option = document.createElement("option");
+                option.value = unitName;
+                option.textContent = unitName;
+                unitSelect.appendChild(option);
+            }
+        }
+
+        let options = Array.from(unitSelect.options).map(o => o.value);
+        if (currentUnit && options.includes(currentUnit)) {
+            unitSelect.value = currentUnit;
+        } else if (unitSelect.options.length > 0) {
+            unitSelect.selectedIndex = 0;
+        }
+
+        // تحديث الدروس بناءً على الوحدة
+        updateLessonDropdownBasedOnUnit(unitSelect.value, targetLesson);
+    }
+
+    // تحديث الصفوف بناءً على المدرس المختار
+    function updateGradeDropdownBasedOnTeacher(selectedTeacher, targetGrade = null, targetUnit = null, targetLesson = null) {
         const gradeSelect = document.getElementById("gradeSelect");
         let currentGrade = targetGrade || gradeSelect.value;
         
@@ -339,7 +477,6 @@
         ];
 
         allGrades.forEach(gradeName => {
-            // شرط محمود حسان: لا يدرس للصف الثاني الثانوي
             if (selectedTeacher === "محمود حسان" && gradeName === "ثانية ثانوي") {
                 return;
             }
@@ -356,6 +493,9 @@
         } else if (gradeSelect.options.length > 0) {
             gradeSelect.selectedIndex = 0;
         }
+
+        // تحديث الوحدات والدروس
+        updateUnitDropdownBasedOnGrade(gradeSelect.value, targetUnit, targetLesson);
     }
 
     // تحميل جميع الدروس من فايربيس
@@ -408,7 +548,7 @@
         }
     }
 
-    // البحث الفوري عن الدروس مع دعم البحث المرن
+    // البحث الفوري
     function filterLessonsData() {
         let rawQuery = document.getElementById("searchInput").value;
         let query = normalizeArabicText(rawQuery);
@@ -452,12 +592,11 @@
         });
     }
 
-    // اختيار درس من القائمة لتعديله أو حذفه
+    // اختيار درس من البحث
     function selectLesson(item) {
         document.getElementById("teacherSelect").value = item.teacher;
-        updateGradeDropdownBasedOnTeacher(item.teacher, item.grade);
-        document.getElementById("unitSelect").value = item.unit;
-        document.getElementById("lessonNameInput").value = item.lessonName;
+        updateGradeDropdownBasedOnTeacher(item.teacher, item.grade, item.unit, item.lessonName);
+        
         document.getElementById("youtubeUrlInput").value = item.youtubeUrl;
 
         document.getElementById("originalLessonId").value = item.id;
@@ -469,7 +608,7 @@
         document.getElementById("teacherSelect").disabled = true;
         document.getElementById("gradeSelect").disabled = true;
         document.getElementById("unitSelect").disabled = true;
-        document.getElementById("lessonNameInput").disabled = true;
+        document.getElementById("lessonSelect").disabled = true;
         document.getElementById("youtubeUrlInput").disabled = true;
 
         document.getElementById("defaultAddBtnContainer").style.display = "none";
@@ -480,12 +619,11 @@
         showToast(`تم تحديد درس: "${item.lessonName}"`, "info");
     }
 
-    // إعادة النماذج لوضع الإضافة الجديدة
+    // إعادة النماذج للوضع الافتراضي
     function resetToAddNewLesson() {
         let currentTeacher = document.getElementById("teacherSelect").value;
         updateGradeDropdownBasedOnTeacher(currentTeacher);
-        document.getElementById("unitSelect").value = "الوحدة الأولى";
-        document.getElementById("lessonNameInput").value = "";
+        
         document.getElementById("youtubeUrlInput").value = "";
         
         document.getElementById("originalLessonId").value = "";
@@ -497,7 +635,7 @@
         document.getElementById("teacherSelect").disabled = false;
         document.getElementById("gradeSelect").disabled = false;
         document.getElementById("unitSelect").disabled = false;
-        document.getElementById("lessonNameInput").disabled = false;
+        document.getElementById("lessonSelect").disabled = false;
         document.getElementById("youtubeUrlInput").disabled = false;
 
         document.getElementById("defaultAddBtnContainer").style.display = "block";
@@ -516,11 +654,11 @@
         const teacher = document.getElementById("teacherSelect").value;
         const grade = document.getElementById("gradeSelect").value;
         const unit = document.getElementById("unitSelect").value;
-        const lessonName = document.getElementById("lessonNameInput").value.trim();
+        const lessonName = document.getElementById("lessonSelect").value;
         const youtubeUrl = document.getElementById("youtubeUrlInput").value.trim();
 
         if (!lessonName || !youtubeUrl) {
-            showToast("الرجاء إدخال اسم الدرس ولينك يوتيوب!", "error");
+            showToast("الرجاء اختيار الدرس وإدخال لينك يوتيوب!", "error");
             return;
         }
 
@@ -551,7 +689,7 @@
         }
     }
 
-    // حفظ التعديلات للدرس
+    // حفظ التعديلات
     async function saveEditedLesson() {
         const lessonId = document.getElementById("originalLessonId").value;
         const oldGrade = document.getElementById("originalGrade").value;
@@ -562,7 +700,7 @@
         const newTeacher = document.getElementById("teacherSelect").value;
         const newGrade = document.getElementById("gradeSelect").value;
         const newUnit = document.getElementById("unitSelect").value;
-        const lessonName = document.getElementById("lessonNameInput").value.trim();
+        const lessonName = document.getElementById("lessonSelect").value;
         const youtubeUrl = document.getElementById("youtubeUrlInput").value.trim();
 
         if (!lessonName || !youtubeUrl) {
@@ -625,7 +763,7 @@
         document.getElementById("teacherSelect").disabled = false;
         document.getElementById("gradeSelect").disabled = false;
         document.getElementById("unitSelect").disabled = false;
-        document.getElementById("lessonNameInput").disabled = false;
+        document.getElementById("lessonSelect").disabled = false;
         document.getElementById("youtubeUrlInput").disabled = false;
 
         let actionsDiv = document.getElementById("selectedLessonActions");
@@ -639,7 +777,7 @@
         document.getElementById("cancelEditLessonBtn").onclick = resetToAddNewLesson;
     }
 
-    // ربط الأحداث بالأزرار
+    // ربط الأحداث
     function bindLessonActionButtons() {
         const addBtn = document.getElementById("addLessonBtn");
         if (addBtn) addBtn.onclick = saveNewLesson;
@@ -663,6 +801,20 @@
         if (teacherSelect) {
             teacherSelect.onchange = function() {
                 updateGradeDropdownBasedOnTeacher(this.value);
+            };
+        }
+
+        const gradeSelect = document.getElementById("gradeSelect");
+        if (gradeSelect) {
+            gradeSelect.onchange = function() {
+                updateUnitDropdownBasedOnGrade(this.value);
+            };
+        }
+
+        const unitSelect = document.getElementById("unitSelect");
+        if (unitSelect) {
+            unitSelect.onchange = function() {
+                updateLessonDropdownBasedOnUnit(this.value);
             };
         }
     }
