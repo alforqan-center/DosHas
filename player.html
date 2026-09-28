@@ -6,8 +6,8 @@
     <title>On Fire Academy - مشغل الدروس الخاص</title>
     <link rel="icon" type="image/jpeg" href="https://i.postimg.cc/Fz97Zty5/Whats-App-Image-2026-09-10-at-2-49-35-AM.jpg">
     
-    <!-- الخطوط الرسمية -->
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Cairo:wght@600;700;900&display=swap" rel="stylesheet">
+    <!-- الخطوط الرسمية (تمت إضافة خط الأميري) -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:wght@800;900&family=Cairo:wght@600;700;900&display=swap" rel="stylesheet">
     
     <!-- استيراد مكتبة Plyr للمشغل المخصص -->
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
@@ -26,7 +26,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Cairo', sans-serif;
+            font-family: 'Amiri', serif; /* توحيد الخط إلى الأميري */
             user-select: none;
         }
         body {
@@ -39,7 +39,7 @@
         header {
             background-color: #0f172a;
             color: #f8fafc;
-            padding: 16px 30px;
+            padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -77,7 +77,7 @@
             padding: 8px 18px;
             border-radius: 20px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 700;
             transition: all 0.2s;
             display: inline-flex;
@@ -89,39 +89,47 @@
             border-color: #ff6b00;
             color: #fff;
         }
+        
+        /* إزالة الهوامش والحواف الجانبية للشاشة الكاملة */
         .container {
             flex: 1;
-            max-width: 950px;
-            margin: 25px auto;
-            padding: 0 15px;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
             width: 100%;
+            display: flex;
+            flex-direction: column;
         }
         .player-card {
             background: #111827;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            border: 1px solid #1f2937;
+            border-radius: 0;
+            padding: 15px;
+            box-shadow: none;
+            border: none;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
         .lesson-header {
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
             border-bottom: 1px solid #1e293b;
         }
         .lesson-title {
             color: #f9fafb;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
         }
         
         .custom-player-wrapper {
             position: relative;
             width: 100%;
-            border-radius: 12px;
+            border-radius: 8px;
             overflow: hidden;
             background: #000;
-            border: 2px solid #1f2937;
-            min-height: 480px;
+            border: 1px solid #1f2937;
+            flex: 1;
+            min-height: 70vh; /* ضبط المقاس حسب الشاشة */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -139,7 +147,7 @@
             background: rgba(0,0,0,0);
         }
 
-        /* درع حماية أزرار درايف العلوية (يمنع الضغط على زر فتح في نافذة خارجية والتنزيل) */
+        /* درع حماية أزرار درايف العلوية */
         .drive-popout-shield {
             position: absolute;
             top: 0;
@@ -153,14 +161,46 @@
 
         .plyr {
             width: 100%;
-            border-radius: 10px;
+            height: 100%;
+            border-radius: 8px;
         }
 
         iframe {
             width: 100%;
-            height: 480px;
+            height: 100%;
             border: 0;
-            border-radius: 12px;
+            border-radius: 8px;
+            min-height: 70vh;
+        }
+
+        /* نظام التنبيهات العائمة (Toast) */
+        #toastContainer {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast-msg {
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border-right: 4px solid #ff6b00;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            font-size: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(20px);
+            pointer-events: auto;
+        }
+        .toast-msg.show {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 
@@ -169,16 +209,41 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const guardDb = firebase.database();
 
+        // دالة إظهار التنبيهات العائمة Toast
+        function showToast(message) {
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = 'toast-msg';
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => { toast.classList.add('show'); }, 50);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3500);
+        }
+
         async function checkStudentSession() {
             const activeCode = localStorage.getItem('activeStudentCode');
-            if (!activeCode) { window.location.href = "index.html"; return; }
+            if (!activeCode) { 
+                showToast('الرجاء تسجيل الدخول أولاً');
+                setTimeout(() => { window.location.href = "index.html"; }, 1500);
+                return; 
+            }
             try {
                 const adminSnap = await guardDb.ref('settings/adminCode').once('value');
                 if (adminSnap.exists() && activeCode === adminSnap.val()) return;
                 const snap = await guardDb.ref('codes/' + activeCode).once('value');
                 if (!snap.exists() || snap.val().status === 'inactive') {
                     localStorage.removeItem('activeStudentCode');
-                    window.location.href = "index.html?expired=true";
+                    showToast('انتهت صلاحية الكود الخاص بك');
+                    setTimeout(() => { window.location.href = "index.html?expired=true"; }, 1500);
                 }
             } catch (e) {}
         }
@@ -209,6 +274,9 @@
             </div>
         </div>
     </div>
+
+    <!-- حاوية التنبيهات العائمة -->
+    <div id="toastContainer"></div>
 
     <script>
         let plyrInstance = null;
@@ -307,10 +375,11 @@
                         disablekb: 1
                     }
                 });
+                showToast('تم تحميل الدرس بنجاح');
                 return;
             }
 
-            // 2. فيديوهات جوجل درايف مع طبقة حماية شفافة على زر الفتح الخارجي
+            // 2. فيديوهات جوجل درايف
             if (driveId) {
                 shield.style.display = 'none';
                 wrapper.innerHTML = `
@@ -319,6 +388,7 @@
                             allow="autoplay; encrypted-media" 
                             allowfullscreen>
                     </iframe>`;
+                showToast('تم تحميل الدرس بنجاح');
                 return;
             }
 
@@ -327,7 +397,7 @@
                 shield.style.display = 'none';
                 const cleanUrl = cleanMediaUrl(currentTargetUrl);
                 wrapper.innerHTML = `
-                    <video id="plyrTarget" controls playsinline style="width:100%;">
+                    <video id="plyrTarget" controls playsinline style="width:100%; height:100%;">
                         <source src="${cleanUrl}" type="video/mp4">
                         <source src="${currentTargetUrl}" type="video/mp4">
                     </video>`;
@@ -336,19 +406,25 @@
                     controls: plyrControls,
                     seekTime: 10
                 });
+                showToast('تم تحميل الدرس بنجاح');
                 return;
             }
 
             // 4. أي رابط تضمين آخر
             shield.style.display = 'none';
             wrapper.innerHTML = `<iframe src="${currentTargetUrl}" allowfullscreen></iframe>`;
+            showToast('تم تحميل الدرس بنجاح');
         }
 
         window.onload = function() {
             const rawUrl = getSmartParam('url');
             const rawTitle = getSmartParam('title');
             if (rawTitle) document.getElementById('displayLessonTitle').innerText = rawTitle;
-            if (rawUrl) renderPlayer(rawUrl);
+            if (rawUrl) {
+                renderPlayer(rawUrl);
+            } else {
+                showToast('عذراً، رابط الدرس غير متوفر');
+            }
         };
 
         document.addEventListener('keydown', function(e) {
