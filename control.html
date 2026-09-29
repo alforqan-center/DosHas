@@ -226,7 +226,7 @@
 
     <!-- الإحصائيات -->
     <div class="stats-section">
-        <span id="totalStudentsCount">📊 إجمالي الطلاب: جاري التحميل...</span>
+        <span id="totalStudentsCount">📊 إجمالي الطلاب جاري التحميل...</span>
         <button id="refreshBtn" style="width: auto; padding: 8px 16px; font-size: 14px; margin:0;">🔄 تحديث</button>
     </div>
 
@@ -239,18 +239,25 @@
         <a href="add-lesson.html" class="lessons-btn">إدارة الدروس 🚀</a>
     </div>
 
-    <!-- كود الكنترول -->
+    <!-- كود وباسورد الكنترول -->
     <div class="settings-section">
-        <label style="color: #ff6b00;">⚙️ إعدادات الكنترول السري:</label>
-        <div style="display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
-            <input type="text" id="adminCodeInput" placeholder="كود الكنترول الجديد" maxlength="6" style="flex: 1; min-width: 150px;">
-            <button id="updateAdminBtn" style="width: 140px; margin-top:0;">تحديث الكود</button>
+        <label style="color: #ff6b00; margin-bottom: 12px;">⚙️ إعدادات الكنترول السري (الكود والباسورد)</label>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 150px;">
+                <label style="font-size: 13px; color: #94a3b8; margin-bottom: 4px;">كود الكنترول</label>
+                <input type="text" id="adminCodeInput" placeholder="الكود..." maxlength="10" autocomplete="off">
+            </div>
+            <div style="flex: 1; min-width: 150px;">
+                <label style="font-size: 13px; color: #94a3b8; margin-bottom: 4px;">كلمة مرور الكنترول</label>
+                <input type="text" id="adminPasswordInput" placeholder="الباسورد..." autocomplete="off">
+            </div>
         </div>
+        <button id="updateAdminBtn" style="width: 100%; margin-top:0;">تحديث بيانات الكنترول 🔒</button>
     </div>
 
     <!-- البحث الفوري -->
     <div class="search-section">
-        <label>🔍 بحث سريع (بالاسم أو الكود):</label>
+        <label>🔍 بحث سريع (بالاسم أو الكود)</label>
         <input type="text" id="searchInput" placeholder="اكتب للبحث..." autocomplete="off">
         <div id="nameListContainer" class="name-list" style="display: none;"></div>
     </div>
@@ -259,20 +266,20 @@
     <div class="form-section">
         <input type="hidden" id="originalCode" value="">
         <div class="form-group">
-            <label>اسم الطالب:</label>
+            <label>اسم الطالب</label>
             <input type="text" id="studentNameInput" placeholder="أدخل اسم الطالب..." autocomplete="off">
         </div>
         <div class="form-group">
-            <label>كود التفعيل:</label>
-            <input type="text" id="codeInput" placeholder="أدخل كود الطالب..." autocomplete="off">
+            <label>كود التفعيل</label>
+            <input type="text" id="codeInput" placeholder="أدخل كود الطالب (أرقام فقط)..." maxlength="8" autocomplete="off">
         </div>
-        <!-- حقل كلمة المرور الجديد -->
+        <!-- حقل كلمة المرور الخاصة بالكود -->
         <div class="form-group">
-            <label>كلمة المرور الخاصة بالكود:</label>
-            <input type="text" id="passwordInput" placeholder="أدخل كلمة المرور..." autocomplete="off">
+            <label>كلمة المرور الخاصة بالكود </label>
+            <input type="text" id="passwordInput" placeholder="أدخل كلمة المرور..." maxlength="8" autocomplete="off">
         </div>
         <div class="form-group">
-            <label>المرحلة الدراسية:</label>
+            <label>المرحلة الدراسية</label>
             <select id="gradeSelect">
                 <option value="أولى إعدادي">أولى إعدادي</option>
                 <option value="ثانية إعدادي">ثانية إعدادي</option>
@@ -283,7 +290,7 @@
             </select>
         </div>
         <div class="form-group">
-            <label>حالة الاشتراك / الكود:</label>
+            <label>حالة الاشتراك / الكود</label>
             <select id="statusSelect">
                 <option value="active">🟢 يعمل (تم الدفع)</option>
                 <option value="inactive">🔴 متوقف (لم يدفع الاشتراك)</option>
@@ -327,16 +334,57 @@
         }, 3200);
     }
 
-    // تحميل البيانات وإحصائيات الطلاب
+    // قيود حقل كود الطالب (أرقام فقط بحد أقصى 8)
+    const codeInput = document.getElementById("codeInput");
+    codeInput.addEventListener("input", function(e) {
+        // السماح بالأرقام فقط وإزالة أي شيء آخر وحجز أول 8 خانات
+        let cleaned = this.value.replace(/\D/g, '').slice(0, 8);
+        if (this.value !== cleaned) {
+            showToast("كود الطالب يقبل الأرقام فقط وبحد أقصى 8 أرقام!", "error");
+        }
+        this.value = cleaned;
+    });
+
+    // قيود حقل كلمة المرور (بحد أقصى 8، ممنوع: الحروف العربية، الشرطة السفلية _، الزائد +, الناقص -)
+    const passwordInput = document.getElementById("passwordInput");
+    passwordInput.addEventListener("input", function(e) {
+        let val = this.value;
+        // فحص وجود حروف عربية أو رموز غير مسموحة (_ أو + أو -)
+        // نطاق الحروف العربية: [\u0600-\u06FF]
+        let arabicRegex = /[\u0600-\u06FF]/;
+        let forbiddenSymbols = /[_+\-]/;
+
+        if (arabicRegex.test(val)) {
+            showToast("ممنوع استخدام الحروف العربية في كلمة المرور!", "error");
+            val = val.replace(/[\u0600-\u06FF]/g, '');
+        }
+        if (forbiddenSymbols.test(val)) {
+            showToast("ممنوع استخدام الرموز (_, +, -) في كلمة المرور!", "error");
+            val = val.replace(/[_+\-]/g, '');
+        }
+
+        // قص النص ليصبح بحد أقصى 8 خانات
+        if (val.length > 8) {
+            val = val.slice(0, 8);
+            showToast("كلمة المرور بحد أقصى 8 خانات فقط!", "error");
+        }
+
+        this.value = val;
+    });
+
+    // تحميل البيانات وإحصائيات الطلاب وإعدادات الكنترول
     async function loadData() {
         const countSpan = document.getElementById("totalStudentsCount");
         countSpan.innerText = "📊 جاري تحميل الطلاب...";
         try {
-            const adminSnapshot = await db.ref('settings/adminCode').once('value');
-            if (adminSnapshot.exists()) {
-                document.getElementById("adminCodeInput").value = adminSnapshot.val();
+            const settingsSnapshot = await db.ref('settings').once('value');
+            if (settingsSnapshot.exists()) {
+                const settings = settingsSnapshot.val();
+                document.getElementById("adminCodeInput").value = settings.adminCode || "0000";
+                document.getElementById("adminPasswordInput").value = settings.adminPassword || "";
             } else {
                 document.getElementById("adminCodeInput").value = "0000";
+                document.getElementById("adminPasswordInput").value = "";
             }
 
             const snapshot = await db.ref('codes').once('value');
@@ -369,18 +417,24 @@
         window.location.href = "index.html";
     }
 
-    // تحديث كود الكنترول
+    // تحديث كود وكلمة مرور الكنترول معاً
     async function updateAdminCode() {
         const newAdminCode = document.getElementById("adminCodeInput").value.trim();
+        const newAdminPassword = document.getElementById("adminPasswordInput").value.trim();
+        
         if (!newAdminCode) {
             showToast("يرجى إدخال كود صحيح للكنترول!", "error");
             return;
         }
+
         try {
-            await db.ref('settings/adminCode').set(newAdminCode);
-            showToast("تم تحديث كود الكنترول السري بنجاح! ⚙️", "success");
+            await db.ref('settings').update({
+                adminCode: newAdminCode,
+                adminPassword: newAdminPassword
+            });
+            showToast("تم تحديث كود وباسورد الكنترول السري بنجاح! ⚙️", "success");
         } catch (e) {
-            showToast("حدث خطأ أثناء تحديث كود الكنترول.", "error");
+            showToast("حدث خطأ أثناء تحديث بيانات الكنترول.", "error");
         }
     }
 
@@ -498,6 +552,11 @@
 
         if (!name || !code) {
             showToast("الرجاء إدخال اسم الطالب وكود التفعيل!", "error");
+            return;
+        }
+
+        if (code.length > 8) {
+            showToast("كود التفعيل يجب ألا يتجاوز 8 أرقام!", "error");
             return;
         }
 
