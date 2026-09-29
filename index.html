@@ -26,7 +26,8 @@
         .login-card p { margin-bottom: 30px; color: #9ca3af; font-size: 14px; line-height: 1.5; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: #d1d5db; font-weight: 600; }
-        .login-card input { width: 100%; padding: 14px; font-size: 20px; text-align: center; background-color: #030712; border: 1px solid #374151; color: #fff; border-radius: 8px; outline: none; letter-spacing: 5px; }
+        .login-card input { width: 100%; padding: 14px; font-size: 18px; text-align: center; background-color: #030712; border: 1px solid #374151; color: #fff; border-radius: 8px; outline: none; }
+        #studentCode { letter-spacing: 3px; } /* تباعد خفيف لكود التفعيل */
         .login-card input:focus { border-color: #ff6b00; box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15); }
         .login-card button { width: 100%; background: linear-gradient(135deg, #ff6b00, #e65c00); color: white; border: none; padding: 13px; font-size: 16px; font-weight: 700; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3); }
         .login-card button:hover { background: linear-gradient(135deg, #e65c00, #cc5200); }
@@ -49,11 +50,16 @@
     <div class="container">
         <div class="login-card">
             <h2>تسجيل الدخول</h2>
-            <p>يرجى إدخال الكود التعريفي الخاص بك للوصول إلى المحتوى الدراسي.</p>
+            <p>يرجى إدخال كود التفعيل وكلمة المرور الخاصة بك للوصول إلى المحتوى الدراسي.</p>
             
             <div class="form-group">
-                <label for="studentCode">أدخل الكود </label>
-                <input type="text" id="studentCode" placeholder="••••••" maxlength="6" autocomplete="off">
+                <label for="studentCode">كود التفعيل</label>
+                <input type="text" id="studentCode" placeholder="أدخل الكود..." maxlength="8" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="studentPassword">كلمة المرور</label>
+                <input type="text" id="studentPassword" placeholder="أدخل كلمة المرور..." autocomplete="off">
             </div>
 
             <button onclick="handleLogin()">دخول المنصة</button>
@@ -71,6 +77,12 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
+        // تقييد كود التفعيل بأرقام فقط بحد أقصى 8 أرقام
+        const studentCodeInput = document.getElementById('studentCode');
+        studentCodeInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 8);
+        });
 
         function getDeviceId() {
             let deviceId = localStorage.getItem('center_device_id');
@@ -92,12 +104,11 @@
             return "first-prep.html";
         }
 
-        // 🔄 فحص تلقائي عند فتح الصفحة (للدخول التلقائي أو الطرد لو تم إيقافه)
+        // 🔄 فحص تلقائي عند فتح الصفحة
         window.onload = async function() {
             const savedCode = localStorage.getItem('activeStudentCode');
             const urlParams = new URLSearchParams(window.location.search);
             
-            // لو جايلنا من صفحة محمية برسالة طرد
             if (urlParams.get('expired') === 'true') {
                 const errorMsg = document.getElementById('errorMsg');
                 errorMsg.innerText = "عذراً، تم إيقاف هذا الكود مؤقتاً لعدم تجديد الاشتراك.";
@@ -107,12 +118,14 @@
 
             if (!savedCode) return;
 
-            // لو الكود مسجل مسبقاً، نتحقق منه لحظياً
             try {
-                const adminSnap = await db.ref('settings/adminCode').once('value');
-                if (adminSnap.exists() && savedCode === adminSnap.val()) {
-                    window.location.href = "control.html";
-                    return;
+                const settingsSnap = await db.ref('settings').once('value');
+                if (settingsSnap.exists()) {
+                    let settings = settingsSnap.val();
+                    if (savedCode === settings.adminCode) {
+                        window.location.href = "control.html";
+                        return;
+                    }
                 }
 
                 const snap = await db.ref('codes/' + savedCode).once('value');
@@ -128,7 +141,6 @@
                         return;
                     }
 
-                    // لو شغال، دخله تلقائياً لصفحته من غير ما يكتب الكود
                     window.location.href = getTargetPageByGrade(data.grade);
                 }
             } catch (e) {
@@ -138,34 +150,34 @@
 
         async function handleLogin() {
             const codeInput = document.getElementById('studentCode').value.trim();
+            const passwordInput = document.getElementById('studentPassword').value; // بدون trim لو الباسورد فيه مسافات مقصودة، أو تسيبه عادي
             const errorMsg = document.getElementById('errorMsg');
 
-            if (!codeInput) {
-                errorMsg.innerText = "يرجى إدخال كود الطالب.";
+            if (!codeInput || !passwordInput) {
+                errorMsg.innerText = "يرجى إدخال كود التفعيل وكلمة المرور.";
                 errorMsg.style.display = 'block';
                 return;
             }
 
-            try {
-                const adminSnap = await db.ref('settings/adminCode').once('value');
-                const currentAdminCode = adminSnap.exists() ? adminSnap.val() : "0000";
-                if (codeInput === currentAdminCode) {
-                    localStorage.setItem('activeStudentCode', codeInput);
-                    window.location.href = "control.html";
-                    return;
-                }
-            } catch (e) {
-                if (codeInput === "0000") {
-                    window.location.href = "control.html";
-                    return;
-                }
-            }
-
             errorMsg.style.display = 'none';
-            const currentDevice = getDeviceId();
-            const codeRef = db.ref('codes/' + codeInput);
 
             try {
+                // 1. التحقق من بيانات الكنترول / الأدمن
+                const settingsSnap = await db.ref('settings').once('value');
+                if (settingsSnap.exists()) {
+                    let settings = settingsSnap.val();
+                    let adminCode = settings.adminCode ? settings.adminCode.toString().trim() : "0000";
+                    let adminPassword = settings.adminPassword || "";
+
+                    if (codeInput === adminCode && passwordInput === adminPassword) {
+                        localStorage.setItem('activeStudentCode', codeInput);
+                        window.location.href = "control.html";
+                        return;
+                    }
+                }
+
+                // 2. التحقق من كود الطالب في قاعدة البيانات
+                const codeRef = db.ref('codes/' + codeInput);
                 const snapshot = await codeRef.once('value');
                 
                 if (!snapshot.exists()) {
@@ -176,6 +188,7 @@
 
                 const codeData = snapshot.val();
                 let studentStatus = codeData.status ? codeData.status.toString().trim().toLowerCase() : 'active';
+                let dbPassword = codeData.password !== undefined ? codeData.password.toString() : "";
 
                 if (studentStatus === 'inactive' || studentStatus === 'stopped' || studentStatus === 'false') {
                     errorMsg.innerText = "عذراً، هذا الكود متوقف مؤقتاً لعدم تجديد الاشتراك.";
@@ -183,6 +196,14 @@
                     return;
                 }
 
+                // التحقق من كلمة المرور
+                if (passwordInput !== dbPassword) {
+                    errorMsg.innerText = "عذراً، كلمة المرور غير صحيحة.";
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+
+                const currentDevice = getDeviceId();
                 if (codeData.deviceId && codeData.deviceId !== currentDevice) {
                     errorMsg.innerText = "عذراً، هذا الكود مرتبط بجهاز آخر بالفعل.";
                     errorMsg.style.display = 'block';
@@ -200,15 +221,17 @@
                 window.location.href = getTargetPageByGrade(codeData.grade);
 
             } catch (error) {
+                console.error(error);
                 errorMsg.innerText = "حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى.";
                 errorMsg.style.display = 'block';
             }
         }
 
         document.getElementById('studentCode').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                handleLogin();
-            }
+            if (e.key === 'Enter') handleLogin();
+        });
+        document.getElementById('studentPassword').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handleLogin();
         });
     </script>
 </body>
