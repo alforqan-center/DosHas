@@ -263,8 +263,13 @@
             <input type="text" id="studentNameInput" placeholder="أدخل اسم الطالب..." autocomplete="off">
         </div>
         <div class="form-group">
-            <label>كود التفعيل (6 أرقام):</label>
-            <input type="text" id="codeInput" placeholder="أدخل كود الطالب..." autocomplete="off" maxlength="6">
+            <label>كود التفعيل:</label>
+            <input type="text" id="codeInput" placeholder="أدخل كود الطالب..." autocomplete="off">
+        </div>
+        <!-- حقل كلمة المرور الجديد -->
+        <div class="form-group">
+            <label>كلمة المرور الخاصة بالكود:</label>
+            <input type="text" id="passwordInput" placeholder="أدخل كلمة المرور..." autocomplete="off">
         </div>
         <div class="form-group">
             <label>المرحلة الدراسية:</label>
@@ -343,6 +348,7 @@
                     allStudentsCache.push({
                         codeKey: codeKey,
                         studentName: info.studentName || info.name || "بدون اسم",
+                        password: info.password || "",
                         grade: info.grade || "أولى إعدادي",
                         status: info.status || "active",
                         deviceId: info.deviceId || null
@@ -418,12 +424,14 @@
     function selectStudent(item) {
         document.getElementById("studentNameInput").value = item.studentName;
         document.getElementById("codeInput").value = item.codeKey;
+        document.getElementById("passwordInput").value = item.password || "";
         document.getElementById("gradeSelect").value = item.grade;
         document.getElementById("statusSelect").value = item.status || "active";
         document.getElementById("originalCode").value = item.codeKey;
 
         document.getElementById("studentNameInput").disabled = true;
         document.getElementById("codeInput").disabled = true;
+        document.getElementById("passwordInput").disabled = true;
         document.getElementById("gradeSelect").disabled = true;
         document.getElementById("statusSelect").disabled = true;
 
@@ -439,6 +447,7 @@
     function enableEditing() {
         document.getElementById("studentNameInput").disabled = false;
         document.getElementById("codeInput").disabled = false;
+        document.getElementById("passwordInput").disabled = false;
         document.getElementById("gradeSelect").disabled = false;
         document.getElementById("statusSelect").disabled = false;
 
@@ -457,12 +466,14 @@
     function resetToAddNew() {
         document.getElementById("studentNameInput").value = "";
         document.getElementById("codeInput").value = "";
+        document.getElementById("passwordInput").value = "";
         document.getElementById("originalCode").value = "";
         document.getElementById("gradeSelect").value = "أولى إعدادي";
         document.getElementById("statusSelect").value = "active";
 
         document.getElementById("studentNameInput").disabled = false;
         document.getElementById("codeInput").disabled = false;
+        document.getElementById("passwordInput").disabled = false;
         document.getElementById("gradeSelect").disabled = false;
         document.getElementById("statusSelect").disabled = false;
 
@@ -481,6 +492,7 @@
     async function saveNewStudent() {
         const name = document.getElementById("studentNameInput").value.trim();
         const code = document.getElementById("codeInput").value.trim();
+        const password = document.getElementById("passwordInput").value.trim();
         const grade = document.getElementById("gradeSelect").value;
         const status = document.getElementById("statusSelect").value;
 
@@ -492,6 +504,7 @@
         try {
             await db.ref(`codes/${code}`).set({
                 studentName: name,
+                password: password,
                 grade: grade,
                 status: status
             });
@@ -508,6 +521,7 @@
         const oldCode = document.getElementById("originalCode").value;
         const name = document.getElementById("studentNameInput").value.trim();
         const newCode = document.getElementById("codeInput").value.trim();
+        const password = document.getElementById("passwordInput").value.trim();
         const grade = document.getElementById("gradeSelect").value;
         const status = document.getElementById("statusSelect").value;
 
@@ -529,6 +543,7 @@
 
             let updateData = {
                 studentName: name,
+                password: password,
                 grade: grade,
                 status: status
             };
