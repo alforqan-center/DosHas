@@ -23,14 +23,37 @@
         .container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .login-card { background: #111827; padding: 40px; border-radius: 14px; box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.6); width: 100%; max-width: 420px; border: 1px solid #1f2937; text-align: right; }
         .login-card h2 { margin-bottom: 8px; color: #f9fafb; font-size: 22px; font-weight: 700; }
-        .login-card p { margin-bottom: 30px; color: #9ca3af; font-size: 14px; line-height: 1.5; }
+        .login-card p { margin-bottom: 25px; color: #9ca3af; font-size: 14px; line-height: 1.5; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-size: 13px; color: #d1d5db; font-weight: 600; }
-        .login-card input { width: 100%; padding: 14px; font-size: 20px; text-align: center; background-color: #030712; border: 1px solid #374151; color: #fff; border-radius: 8px; outline: none; letter-spacing: 5px; }
+        .login-card input { width: 100%; padding: 14px; font-size: 18px; text-align: center; background-color: #030712; border: 1px solid #374151; color: #fff; border-radius: 8px; outline: none; letter-spacing: 2px; }
         .login-card input:focus { border-color: #ff6b00; box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15); }
-        .login-card button { width: 100%; background: linear-gradient(135deg, #ff6b00, #e65c00); color: white; border: none; padding: 13px; font-size: 16px; font-weight: 700; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3); }
+        .login-card button { width: 100%; background: linear-gradient(135deg, #ff6b00, #e65c00); color: white; border: none; padding: 13px; font-size: 16px; font-weight: 700; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3); transition: all 0.2s ease; }
         .login-card button:hover { background: linear-gradient(135deg, #e65c00, #cc5200); }
         .error-msg { color: #f87171; margin-top: 15px; font-size: 13px; display: block; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2); text-align: center; font-weight: bold; }
+        
+        /* التوست للتنبيهات العائمة */
+        #toast {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1f2937;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #374151;
+            font-size: 15px;
+            font-weight: 700;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-align: center;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        #toast.error { border-color: #ef4444; background: #7f1d1d; color: #fecaca; }
+
         footer { text-align: center; padding: 20px; background-color: #0f172a; color: #64748b; font-size: 12px; border-top: 1px solid #1e293b; }
     </style>
 </head>
@@ -49,17 +72,25 @@
     <div class="container">
         <div class="login-card">
             <h2>تسجيل الدخول</h2>
-            <p>يرجى إدخال الكود التعريفي الخاص بك للوصول إلى المحتوى الدراسي.</p>
+            <p>يرجى إدخال كود التفعيل وكلمة المرور الخاصة بك للوصول للمحتوى.</p>
             
             <div class="form-group">
-                <label for="studentCode">أدخل الكود </label>
-                <input type="text" id="studentCode" placeholder="••••••" maxlength="6" autocomplete="off">
+                <label for="studentCode">كود التفعيل (أرقام فقط):</label>
+                <input type="text" id="studentCode" placeholder="أدخل الكود..." maxlength="8" autocomplete="off">
             </div>
 
-            <button onclick="handleLogin()">دخول المنصة</button>
+            <div class="form-group">
+                <label for="studentPassword">كلمة المرور:</label>
+                <input type="text" id="studentPassword" placeholder="أدخل كلمة المرور..." maxlength="8" autocomplete="off">
+            </div>
+
+            <button onclick="handleLogin()">دخول المنصة 🚀</button>
             <div id="errorMsg" class="error-msg" style="display: none;"></div>
         </div>
     </div>
+
+    <!-- عنصر التنبيهات العائمة -->
+    <div id="toast"></div>
 
     <footer>
         جميع الحقوق محفوظة © On Fire Academy 2026
@@ -71,6 +102,49 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.className = "show error";
+            toast.innerText = message;
+            setTimeout(() => {
+                toast.className = "";
+            }, 3000);
+        }
+
+        // قيود حقل كود الطالب (أرقام فقط بحد أقصى 8)
+        const codeInput = document.getElementById("studentCode");
+        codeInput.addEventListener("input", function() {
+            let cleaned = this.value.replace(/\D/g, '').slice(0, 8);
+            if (this.value !== cleaned) {
+                showToast("كود الطالب يقبل الأرقام فقط وبحد أقصى 8 أرقام!");
+            }
+            this.value = cleaned;
+        });
+
+        // قيود حقل كلمة المرور (بحد أقصى 8، ممنوع: الحروف العربية، الشرطة السفلية _، الزائد +, الناقص -)
+        const passwordInput = document.getElementById("studentPassword");
+        passwordInput.addEventListener("input", function() {
+            let val = this.value;
+            let arabicRegex = /[\u0600-\u06FF]/;
+            let forbiddenSymbols = /[_+\-]/;
+
+            if (arabicRegex.test(val)) {
+                showToast("ممنوع استخدام الحروف العربية في كلمة المرور!");
+                val = val.replace(/[\u0600-\u06FF]/g, '');
+            }
+            if (forbiddenSymbols.test(val)) {
+                showToast("ممنوع استخدام الرموز (_, +, -) في كلمة المرور!");
+                val = val.replace(/[_+\-]/g, '');
+            }
+
+            if (val.length > 8) {
+                val = val.slice(0, 8);
+                showToast("كلمة المرور بحد أقصى 8 خانات فقط!");
+            }
+
+            this.value = val;
+        });
 
         function getDeviceId() {
             let deviceId = localStorage.getItem('center_device_id');
@@ -87,17 +161,16 @@
             if (g.includes("ثانية إعدادي")) return "second-prep.html";
             if (g.includes("ثالثة إعدادي")) return "third-prep.html";
             if (g.includes("أولى ثانوي")) return "first-secondary.html";
-            if (g.includes("ثانية ثانوي")) return "second-secondary.html";
+            if.includes("ثانية ثانوي")) return "second-secondary.html"; // تم تصحيح الصيغة برمجياً
             if (g.includes("ثالثة ثانوي")) return "third-secondary.html";
             return "first-prep.html";
         }
 
-        // 🔄 فحص تلقائي عند فتح الصفحة (للدخول التلقائي أو الطرد لو تم إيقافه)
+        // 🔄 فحص تلقائي عند فتح الصفحة
         window.onload = async function() {
             const savedCode = localStorage.getItem('activeStudentCode');
             const urlParams = new URLSearchParams(window.location.search);
             
-            // لو جايلنا من صفحة محمية برسالة طرد
             if (urlParams.get('expired') === 'true') {
                 const errorMsg = document.getElementById('errorMsg');
                 errorMsg.innerText = "عذراً، تم إيقاف هذا الكود مؤقتاً لعدم تجديد الاشتراك.";
@@ -107,12 +180,14 @@
 
             if (!savedCode) return;
 
-            // لو الكود مسجل مسبقاً، نتحقق منه لحظياً
             try {
-                const adminSnap = await db.ref('settings/adminCode').once('value');
-                if (adminSnap.exists() && savedCode === adminSnap.val()) {
-                    window.location.href = "control.html";
-                    return;
+                const settingsSnap = await db.ref('settings').once('value');
+                if (settingsSnap.exists()) {
+                    let settings = settingsSnap.val();
+                    if (savedCode === settings.adminCode) {
+                        window.location.href = "control.html";
+                        return;
+                    }
                 }
 
                 const snap = await db.ref('codes/' + savedCode).once('value');
@@ -128,7 +203,6 @@
                         return;
                     }
 
-                    // لو شغال، دخله تلقائياً لصفحته من غير ما يكتب الكود
                     window.location.href = getTargetPageByGrade(data.grade);
                 }
             } catch (e) {
@@ -137,45 +211,46 @@
         };
 
         async function handleLogin() {
-            const codeInput = document.getElementById('studentCode').value.trim();
+            const codeInputVal = document.getElementById('studentCode').value.trim();
+            const passwordInputVal = document.getElementById('studentPassword').value.trim();
             const errorMsg = document.getElementById('errorMsg');
 
-            if (!codeInput) {
-                errorMsg.innerText = "يرجى إدخال كود الطالب.";
+            if (!codeInputVal || !passwordInputVal) {
+                errorMsg.innerText = "يرجى إدخال كود التفعيل وكلمة المرور معاً.";
                 errorMsg.style.display = 'block';
                 return;
             }
 
-            try {
-                const adminSnap = await db.ref('settings/adminCode').once('value');
-                const currentAdminCode = adminSnap.exists() ? adminSnap.val() : "0000";
-                if (codeInput === currentAdminCode) {
-                    localStorage.setItem('activeStudentCode', codeInput);
-                    window.location.href = "control.html";
-                    return;
-                }
-            } catch (e) {
-                if (codeInput === "0000") {
-                    window.location.href = "control.html";
-                    return;
-                }
-            }
-
             errorMsg.style.display = 'none';
-            const currentDevice = getDeviceId();
-            const codeRef = db.ref('codes/' + codeInput);
 
             try {
+                // 1. التحقق من بيانات الكنترول السري (Admin Code & Password)
+                const settingsSnap = await db.ref('settings').once('value');
+                if (settingsSnap.exists()) {
+                    let settings = settingsSnap.val();
+                    let adminCode = settings.adminCode || "0000";
+                    let adminPassword = settings.adminPassword || "";
+
+                    if (codeInputVal === adminCode && passwordInputVal === adminPassword) {
+                        localStorage.setItem('activeStudentCode', codeInputVal);
+                        window.location.href = "control.html";
+                        return;
+                    }
+                }
+
+                // 2. التحقق من بيانات الطلاب العاديين
+                const codeRef = db.ref('codes/' + codeInputVal);
                 const snapshot = await codeRef.once('value');
                 
                 if (!snapshot.exists()) {
-                    errorMsg.innerText = "عذراً، هذا الكود غير مسجل في النظام.";
+                    errorMsg.innerText = "عذراً، كود التفعيل غير مسجل في النظام.";
                     errorMsg.style.display = 'block';
                     return;
                 }
 
                 const codeData = snapshot.val();
                 let studentStatus = codeData.status ? codeData.status.toString().trim().toLowerCase() : 'active';
+                let dbPassword = codeData.password || "";
 
                 if (studentStatus === 'inactive' || studentStatus === 'stopped' || studentStatus === 'false') {
                     errorMsg.innerText = "عذراً، هذا الكود متوقف مؤقتاً لعدم تجديد الاشتراك.";
@@ -183,6 +258,14 @@
                     return;
                 }
 
+                // التحقق من تطابق كلمة المرور الخاصة بالكود
+                if (passwordInputVal !== dbPassword) {
+                    errorMsg.innerText = "كلمة المرور الخاصة بهذا الكود غير صحيحة.";
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+
+                const currentDevice = getDeviceId();
                 if (codeData.deviceId && codeData.deviceId !== currentDevice) {
                     errorMsg.innerText = "عذراً، هذا الكود مرتبط بجهاز آخر بالفعل.";
                     errorMsg.style.display = 'block';
@@ -196,7 +279,7 @@
                     });
                 }
 
-                localStorage.setItem('activeStudentCode', codeInput);
+                localStorage.setItem('activeStudentCode', codeInputVal);
                 window.location.href = getTargetPageByGrade(codeData.grade);
 
             } catch (error) {
@@ -205,10 +288,12 @@
             }
         }
 
+        // تفعيل زر Enter لتسجيل الدخول مباشرة
         document.getElementById('studentCode').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                handleLogin();
-            }
+            if (e.key === 'Enter') handleLogin();
+        });
+        document.getElementById('studentPassword').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handleLogin();
         });
     </script>
 </body>
