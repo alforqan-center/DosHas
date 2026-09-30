@@ -23,11 +23,10 @@
         .container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .login-card { background: #111827; padding: 40px; border-radius: 14px; box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.6); width: 100%; max-width: 420px; border: 1px solid #1f2937; text-align: right; }
         .login-card h2 { margin-bottom: 8px; color: #f9fafb; font-size: 24px; font-weight: 700; }
-        .login-card p { margin-bottom: 30px; color: #9ca3af; font-size: 15px; line-height: 1.6; }
+        .login-card p { margin-bottom: 25px; color: #9ca3af; font-size: 15px; line-height: 1.6; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-size: 15px; color: #d1d5db; font-weight: 700; }
-        .login-card input { width: 100%; padding: 14px; font-size: 18px; text-align: center; background-color: #030712; border: 1px solid #374151; color: #fff; border-radius: 8px; outline: none; }
-        #studentCode { letter-spacing: 3px; }
+        .login-card input { width: 100%; padding: 14px; font-size: 17px; text-align: right; direction: ltr; background-color: #030712; border: 1px solid #374151; color: #fff; border-radius: 8px; outline: none; }
         .login-card input:focus { border-color: #ff6b00; box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15); }
         .login-card button { width: 100%; background: linear-gradient(135deg, #ff6b00, #e65c00); color: white; border: none; padding: 13px; font-size: 18px; font-weight: 700; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3); }
         .login-card button:hover { background: linear-gradient(135deg, #e65c00, #cc5200); }
@@ -50,11 +49,11 @@
     <div class="container">
         <div class="login-card">
             <h2>تسجيل الدخول</h2>
-            <p>يرجى إدخال كود التفعيل وكلمة المرور الخاصة بك للوصول إلى المحتوى الدراسي.</p>
+            <p>يرجى إدخال البريد الإلكتروني (البريد الخاص بالكود) وكلمة المرور.</p>
             
             <div class="form-group">
-                <label for="studentCode">كود التفعيل</label>
-                <input type="text" id="studentCode" placeholder="أدخل الكود..." maxlength="8" autocomplete="off">
+                <label for="studentEmail">البريد الإلكتروني (الـ Gmail)</label>
+                <input type="text" id="studentEmail" placeholder="example@gmail.com" autocomplete="off">
             </div>
 
             <div class="form-group">
@@ -78,11 +77,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const studentCodeInput = document.getElementById('studentCode');
-        studentCodeInput.addEventListener('input', function() {
-            this.value = this.value.replace(/\D/g, '').slice(0, 8);
-        });
-
         function getDeviceId() {
             let deviceId = localStorage.getItem('center_device_id');
             if (!deviceId) {
@@ -103,13 +97,22 @@
             return "first-prep.html";
         }
 
+        // استخراج الكود من الإيميل (الجزء اللي قبل علامة @ أو الإيميل كله لو مش كاتب @)
+        function extractCodeFromEmail(emailInput) {
+            let cleanInput = emailInput.trim();
+            if (cleanInput.includes('@')) {
+                return cleanInput.split('@')[0].trim();
+            }
+            return cleanInput;
+        }
+
         window.onload = async function() {
             const savedCode = localStorage.getItem('activeStudentCode');
             const urlParams = new URLSearchParams(window.location.search);
             
             if (urlParams.get('expired') === 'true') {
                 const errorMsg = document.getElementById('errorMsg');
-                errorMsg.innerText = "عذراً، تم إيقاف هذا الكود مؤقتاً لعدم تجديد الاشتراك.";
+                errorMsg.innerText = "عذراً، تم إيقاف هذا الحساب مؤقتاً لعدم تجديد الاشتراك.";
                 errorMsg.style.display = 'block';
                 localStorage.removeItem('activeStudentCode');
             }
@@ -134,7 +137,7 @@
                     if (status === 'inactive' || status === 'stopped' || status === 'false') {
                         localStorage.removeItem('activeStudentCode');
                         const errorMsg = document.getElementById('errorMsg');
-                        errorMsg.innerText = "عذراً، هذا الكود متوقف مؤقتاً لعدم تجديد الاشتراك.";
+                        errorMsg.innerText = "عذراً، هذا الحساب متوقف مؤقتاً لعدم تجديد الاشتراك.";
                         errorMsg.style.display = 'block';
                         return;
                     }
@@ -147,19 +150,21 @@
         };
 
         async function handleLogin() {
-            const codeInput = document.getElementById('studentCode').value.trim();
+            const emailInputVal = document.getElementById('studentEmail').value.trim();
             const passwordInput = document.getElementById('studentPassword').value;
             const errorMsg = document.getElementById('errorMsg');
 
-            if (!codeInput || !passwordInput) {
-                errorMsg.innerText = "يرجى إدخال كود التفعيل وكلمة المرور.";
+            if (!emailInputVal || !passwordInput) {
+                errorMsg.innerText = "يرجى إدخال البريد الإلكتروني وكلمة المرور.";
                 errorMsg.style.display = 'block';
                 return;
             }
 
             errorMsg.style.display = 'none';
+            const codeInput = extractCodeFromEmail(emailInputVal);
 
             try {
+                // التحقق من بيانات الأدمن/الكنترول (لو دخل بالإيميل السري أو الكود المعتاد)
                 const settingsSnap = await db.ref('settings').once('value');
                 if (settingsSnap.exists()) {
                     let settings = settingsSnap.val();
@@ -177,7 +182,7 @@
                 const snapshot = await codeRef.once('value');
                 
                 if (!snapshot.exists()) {
-                    errorMsg.innerText = "عذراً، هذا الكود غير مسجل في النظام.";
+                    errorMsg.innerText = "عذراً، البريد الإلكتروني أو الحساب غير مسجل في النظام.";
                     errorMsg.style.display = 'block';
                     return;
                 }
@@ -187,7 +192,7 @@
                 let dbPassword = codeData.password !== undefined ? codeData.password.toString() : "";
 
                 if (studentStatus === 'inactive' || studentStatus === 'stopped' || studentStatus === 'false') {
-                    errorMsg.innerText = "عذراً، هذا الكود متوقف مؤقتاً لعدم تجديد الاشتراك.";
+                    errorMsg.innerText = "عذراً، هذا الحساب متوقف مؤقتاً لعدم تجديد الاشتراك.";
                     errorMsg.style.display = 'block';
                     return;
                 }
@@ -200,7 +205,7 @@
 
                 const currentDevice = getDeviceId();
                 if (codeData.deviceId && codeData.deviceId !== currentDevice) {
-                    errorMsg.innerText = "عذراً، هذا الكود مرتبط بجهاز آخر بالفعل.";
+                    errorMsg.innerText = "عذراً، هذا الحساب مرتبط بجهاز آخر بالفعل.";
                     errorMsg.style.display = 'block';
                     return;
                 }
@@ -222,7 +227,7 @@
             }
         }
 
-        document.getElementById('studentCode').addEventListener('keypress', function (e) {
+        document.getElementById('studentEmail').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleLogin();
         });
         document.getElementById('studentPassword').addEventListener('keypress', function (e) {
